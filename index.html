@@ -1,0 +1,9 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sale Tracker</title><link rel="stylesheet" href="styles.css"></head><body><main>
+<h1 id="ttl">Sale tracker</h1><div class="sub">Abercrombie men's XS clearance</div>
+<div class="tabs"><button data-k="t" aria-pressed="true">Today</button><button data-k="y">Yesterday</button></div>
+<div id="view"></div>
+<details><summary>More: full table and older days</summary>
+<div class="ctl"><input id="q" placeholder="Search name, color, id"><select id="f"><option value="all">All</option><option value="60">60%+ off</option><option value="new">New today</option></select><span id="cnt" class="sub"></span></div>
+<div class="tw"><table><thead><tr><th data-k="name">Item</th><th data-k="color">Color</th><th data-k="sale">Sale</th><th data-k="orig">Orig</th><th data-k="pct">Off</th></tr></thead><tbody id="tb"></tbody></table></div>
+<h2>Older days</h2><ul class="l" id="older"></ul></details>
+</main><script src="app.js"></script></body></html>

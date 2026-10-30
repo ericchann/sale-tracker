@@ -1,9 +1,35 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sale Tracker</title><link rel="stylesheet" href="styles.css"></head><body><main>
-<h1 id="ttl">Sale tracker</h1><div class="sub">Abercrombie men's XS clearance</div><div class="sub" id="upd"></div>
-<div class="tabs"><button data-k="t" aria-pressed="true">Today</button><button data-k="y">Yesterday</button><button data-k="f">Favorites</button></div>
-<div id="view"></div>
-<details><summary>More: full table and older days</summary>
-<div class="ctl"><input id="q" placeholder="Search name, color, id"><select id="f"><option value="all">All</option><option value="60">60%+ off</option><option value="new">New today</option></select><span id="cnt" class="sub"></span></div>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sale Tracker</title>
+<meta name="description" content="Daily price tracker for Abercrombie men's XS clearance: 60%+ off, new arrivals, price drops and favorites.">
+<meta name="theme-color" content="#fafaf8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141413" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Sale Tracker">
+<meta property="og:description" content="Daily price tracker for Abercrombie men's XS clearance: 60%+ off, new arrivals, price drops and favorites.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23c0262d'/%3E%3Ccircle cx='11' cy='11' r='2.8' fill='white'/%3E%3Ccircle cx='21' cy='21' r='2.8' fill='white'/%3E%3Cpath d='M22 9L10 23' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top"><div class="bar">
+<div class="brand"><span class="logo" aria-hidden="true">%</span><h1 id="ttl">Sale Tracker</h1></div>
+<nav class="tabs" aria-label="Views"><button data-k="t" aria-pressed="true">Today</button><button data-k="y">Yesterday</button><button data-k="f">Favorites</button></nav>
+</div></header>
+<main>
+<p class="intro">Abercrombie men's XS clearance<span id="upd"></span></p>
+<div id="view" aria-live="polite"><div class="grid" aria-hidden="true"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
+<details class="more"><summary>Full table and older days</summary>
+<div class="tools"><input id="q" type="search" placeholder="Search name, color, id" aria-label="Search"><select id="f" aria-label="Filter"><option value="all">All</option><option value="60">60%+ off</option><option value="new">New today</option></select><span id="cnt" class="sub"></span></div>
 <div class="tw"><table><thead><tr><th data-k="name">Item</th><th data-k="color">Color</th><th data-k="sale">Sale</th><th data-k="orig">Orig</th><th data-k="pct">Off</th></tr></thead><tbody id="tb"></tbody></table></div>
 <h2>Older days</h2><ul class="l" id="older"></ul></details>
-</main><script src="app.js"></script></body></html>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

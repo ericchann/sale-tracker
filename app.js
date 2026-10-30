@@ -35,20 +35,27 @@ const isNew=i=>Y&&!ym[tk(i)];
 function card(i,tags='',extra=''){const p=photo(i)||i._p;
 return `<a class="card" href="${url(i)}" target="_blank" rel="noopener"><div class="ph">${p?`<img loading="lazy" src="${p}" alt="" onerror="this.remove()">`:'<span class="nop">No photo</span>'}<span class="tag">${pct(i)}% off</span>${tags}${star(i)}</div><div class="info"><div class="nm">${esc(i.name)}</div><div class="cl">${esc(i.color||'')}</div><div class="pr"><b>${$$(i.sale)}</b><s>${$$(i.orig)}</s></div>${extra}</div></a>`}
 let vcat='all',vsort='off';
+const SKEY='sale-tracker-sections';
+let secOpen={b50:false,b40:false};try{Object.assign(secOpen,JSON.parse(localStorage.getItem(SKEY)||'{}'))}catch(e){}
+document.addEventListener('toggle',e=>{const d=e.target;if(d&&d.dataset&&d.dataset.s){secOpen[d.dataset.s]=d.open;try{localStorage.setItem(SKEY,JSON.stringify(secOpen))}catch(x){}}},true);
 const CATS=[['Swim',/swim|trunk/],['Outerwear',/jacket|coat|puffer|bomber|parka|vest|windbreaker|shacket|blazer|anorak/],['Sweaters',/sweater|cardigan|knit/],['Hoodies',/hoodie|afterhood|sweatshirt|fleece|zip/],['Underwear',/boxer|brief|underwear|socks?\b/],['Tees & tanks',/\btees?\b|t-shirt|tank|muscle|henley|jersey/],['Shirts & polos',/polo|shirt|flannel|oxford|button|popover/],['Bottoms',/\bpants?\b|\bshorts?\b(?![- ]sleeve)|jogger|jean|sweatpant|chino|trouser|cargo|denim|legging/]];
 const catOf=n=>{const t=String(n).toLowerCase();for(const [c,r] of CATS)if(r.test(t))return c;return 'Other'};
 function view(D,P,which){
  const its=D.items,hotAll=its.filter(i=>pct(i)>=60);
  const legacy=legacyCmp(D,P),k=keyFor(legacy),dm=minBy(P,k),cm=minBy(D,k);
  const newsAll=Object.values(cm).filter(i=>P&&!dm[k(i)]);
- const cn=c=>hotAll.filter(i=>catOf(i.name)===c).length;
+ const disc=its.filter(i=>pct(i)>=40);
+ const cn=c=>disc.filter(i=>catOf(i.name)===c).length;
  const cats=[...CATS.map(c=>c[0]),'Other'].filter(c=>cn(c)||newsAll.some(i=>catOf(i.name)===c));
  const vc=vcat==='all'||cats.includes(vcat)?vcat:'all',vs=vsort==='drop'&&!P?'off':vsort;
  const dropAmt=i=>dm[k(i)]?Math.max(0,dm[k(i)].sale-i.sale):0;
  const off=(a,b)=>pct(b)-pct(a)||a.sale-b.sale;
  const ord={off,price:(a,b)=>a.sale-b.sale||off(a,b),saved:(a,b)=>(b.orig-b.sale)-(a.orig-a.sale)||off(a,b),drop:(a,b)=>dropAmt(b)-dropAmt(a)||off(a,b)}[vs];
  const sel=a=>vc==='all'||catOf(a.name)===vc;
- const hot=hotAll.filter(sel).sort(ord),news=newsAll.filter(sel).sort(ord);
+ const news=newsAll.filter(sel).sort(ord);
+ const bands=[['b60','60%+ off',i=>pct(i)>=60],['b50','50\u201360% off',i=>pct(i)>=50&&pct(i)<60],['b40','40\u201350% off',i=>pct(i)>=40&&pct(i)<50]].map(([id,t,f])=>{const all=its.filter(f);return{id,t,all,list:all.filter(sel).sort(ord)}});
+ const tagsFor=i=>P&&!dm[k(i)]?'<span class="tag n">NEW</span>':(P&&dm[k(i)]&&i.sale<dm[k(i)].sale?'<span class="tag d">DROP</span>':'');
+ const sec=(id,title,ct,body)=>`<details class="sec" data-s="${id}"${secOpen[id]!==false?' open':''}><summary><h2>${title} <span class="ct">${ct}</span></h2></summary>${body}</details>`;
  const of=(n,t)=>vc==='all'?n:n+' of '+t;
  const drops=Object.values(cm).filter(i=>P&&dm[k(i)]&&i.sale<dm[k(i)].sale);
  const gone=P?Object.values(dm).filter(i=>!cm[k(i)]):[];
@@ -60,11 +67,11 @@ function view(D,P,which){
  let o=`<div class="stats">${st(hotAll.length,'at 60%+ off')}${st(hotAll.filter(i=>pct(i)>=70).length,'at 70%+')}${P?st(newsAll.length,'new')+st(drops.length,'price drops')+st(gone.length,'gone'):''}${st(its.length,'listings')}</div>`;
  o+=`<p class="promo">${esc(D.promo||'')}${D.readable===false?' <b>Page could not be read fully.</b>':''}${legacy?' Colorway comparison starts next day; today is compared to yesterday by product, name and original price.':''}</p>`;
  o+=`<div class="controls"><div class="chips" role="group" aria-label="Category">${chip('all','All')}${cats.map(c=>chip(c,c,cn(c))).join('')}</div><label class="sort"><span class="sub">Sort</span><select id="vs">${[['off','Biggest discount %'],['saved','Biggest $ saved'],['price','Lowest price']].concat(P?[['drop','Biggest drop since yesterday']]:[]).map(([v,t])=>`<option value="${v}"${v===vs?' selected':''}>${t}</option>`).join('')}</select></label></div>`;
- o+=`<section><h2>60%+ off <span class="ct">${of(hot.length,hotAll.length)}</span></h2>${hot.length?`<div class="grid">${hot.map(i=>card(i,(P&&!dm[k(i)]?'<span class="tag n">NEW</span>':(P&&dm[k(i)]&&i.sale<dm[k(i)].sale?'<span class="tag d">DROP</span>':'')))).join('')}</div>`:none('Nothing matches this filter.')}</section>`;
+ for(const b of bands)o+=sec(b.id,b.t,of(b.list.length,b.all.length),b.list.length?`<div class="grid">${b.list.map(i=>card(i,tagsFor(i))).join('')}</div>`:none(vc==='all'?'Nothing in this range.':'Nothing matches this filter.'));
  if(P){
- o+=`<section><h2>New <span class="ct">${of(news.length,newsAll.length)} since ${esc(P.label)}</span></h2>${news.length?`<div class="grid">${news.map(i=>card(i)).join('')}</div>`:none('Nothing new.')}</section>`;
- o+=`<section><h2>Price drops <span class="ct">${drops.length}</span></h2>${rows(drops,i=>row(i,`<s>${$$(dm[k(i)].sale)}</s> \u2192 <b>${$$(i.sale)}</b> <span class="sub">${pct(i)}% off</span>`))}</section>`;
- o+=`<section><h2>Gone <span class="ct">${gone.length}</span></h2>${rows(gone,i=>row(i,`was ${$$(i.sale)}`))}</section>`;}
+ o+=sec('new','New',`${of(news.length,newsAll.length)} since ${esc(P.label)}`,news.length?`<div class="grid">${news.map(i=>card(i)).join('')}</div>`:none('Nothing new.'));
+ o+=sec('drops','Price drops',drops.length,rows(drops,i=>row(i,`<s>${$$(dm[k(i)].sale)}</s> \u2192 <b>${$$(i.sale)}</b> <span class="sub">${pct(i)}% off</span>`)));
+ o+=sec('gone','Gone',gone.length,rows(gone,i=>row(i,`was ${$$(i.sale)}`)));}
  return o}
 const main=$('#view');let cur='t';
 const byKey={};for(const d of [Y,T])if(d)for(const i of d.items)byKey[fk(i)]=i;

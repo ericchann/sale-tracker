@@ -36,7 +36,7 @@ function view(D,P,which){
  o+=`<div class="note">${esc(D.promo||'')}${D.readable===false?' <b>Page could not be read fully.</b>':''}${legacy?' Colorway comparison starts next day; today is compared to yesterday by product, name and original price.':''}</div>`;
  o+=`<h2>${hot.length} items at 60%+ off${h.length?` (${h.length} at 70%+)`:''}</h2><div class="grid">${hot.map(i=>card(i,(P&&!dm[k(i)]?'<span class="tag n">NEW</span>':(P&&dm[k(i)]&&i.sale<dm[k(i)].sale?'<span class="tag d">DROP</span>':'')))).join('')}</div>`;
  if(P){
- o+=`<h2>New since ${esc(P.label)} (${news.length})</h2>`+li(news,i=>`<li><a href="${url(i)}" target="_blank">${esc(i.name)}</a> ${esc(i.color||'')} — <b>${$$(i.sale)}</b> <s>${$$(i.orig)}</s> (${pct(i)}% off)</li>`);
+ o+=`<h2>New since ${esc(P.label)} (${news.length})</h2>`+(news.length?`<div class="grid">${news.map(i=>card(i)).join('')}</div>`:'<div class="empty">None.</div>');
  o+=`<h2>Price drops (${drops.length})</h2>`+li(drops,i=>`<li><a href="${url(i)}" target="_blank">${esc(i.name)}</a>${i.color?' '+esc(i.color):''} — ${$$(dm[k(i)].sale)} → <b>${$$(i.sale)}</b> (${pct(i)}% off)</li>`);
  o+=`<h2>Gone (${gone.length})</h2>`+li(gone,i=>`<li>${esc(i.name)} ${esc(i.color||'')} — was ${$$(i.sale)}</li>`);}
  return o}

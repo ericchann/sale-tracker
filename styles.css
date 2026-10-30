@@ -21,3 +21,10 @@ ul.l{list-style:none;padding:0;margin:0}ul.l li{padding:6px 0;border-bottom:1px 
 details{margin-top:36px;border-top:1px solid var(--bd);padding-top:12px}summary{cursor:pointer;font-weight:600}
 .ctl{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.ctl input,.ctl select{font:inherit;padding:6px 10px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--fg)}
 table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--bd)}th{cursor:pointer}td a{color:inherit}
+
+.fav{cursor:pointer;user-select:none;color:#6b6b66;font-size:18px;line-height:1}.fav[aria-pressed=true]{color:#e0a100}
+.ph .fav{position:absolute;right:6px;bottom:6px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center}
+td .fav{margin-right:4px}
+.hist{margin-top:6px}.spark{display:block;margin-bottom:4px}.spark polyline{fill:none;stroke:var(--blu);stroke-width:1.8;stroke-linejoin:round}
+.chg{font-weight:600}.chg.dn{color:var(--grn)}.chg.up{color:var(--red)}.hist .sub{margin-top:2px}
+.nw{white-space:nowrap}

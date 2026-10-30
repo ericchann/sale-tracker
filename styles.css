@@ -28,3 +28,5 @@ td .fav{margin-right:4px}
 .hist{margin-top:6px}.spark{display:block;margin-bottom:4px}.spark polyline{fill:none;stroke:var(--blu);stroke-width:1.8;stroke-linejoin:round}
 .chg{font-weight:600}.chg.dn{color:var(--grn)}.chg.up{color:var(--red)}.hist .sub{margin-top:2px}
 .nw{white-space:nowrap}
+.warn{color:var(--red)}
+.ctl label{display:flex;align-items:center;gap:6px}.ctl button,.fsync button{font:inherit;padding:6px 10px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--fg);cursor:pointer}.fsync .ctl a{color:var(--blu);align-self:center}

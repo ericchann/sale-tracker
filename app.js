@@ -1,26 +1,32 @@
 (async function(){
 const $=s=>document.querySelector(s);
 const get=async u=>window.__DATA__?window.__DATA__[u]:(await fetch(u)).json();
-const idx=await get('data/index.json');
+const STORES=[['abercrombie','Abercrombie',"men's XS clearance"],['uniqlo','Uniqlo',"men's sale"],['ralphlauren-polo','Ralph Lauren Polo',"men's sale"],['ralphlauren-boys','Ralph Lauren Boys',"big boy sale"],['kith','Kith',"end-of-season event, men's items"]];
+const STKEY='sale-tracker-store';
+let store='abercrombie';try{const q=localStorage.getItem(STKEY);if(STORES.some(x=>x[0]===q))store=q}catch(e){}
+const ABE=()=>store==='abercrombie';
+const base=()=>ABE()?'data/':'data/'+store+'/';
+const ORIGIN={uniqlo:'https://www.uniqlo.com','ralphlauren-polo':'https://www.ralphlauren.com','ralphlauren-boys':'https://www.ralphlauren.com',kith:'https://kith.com'};
+let idx={days:[]},Y=null,T=null,tk,ym,byKey={};
 const photos=await get('data/photos.json').catch(()=>({}));
 const watch=(await get('data/watch.json').catch(()=>null))||{items:[]};
-const names=idx.days.slice(-2);
-const days=[];for(const n of names)days.push(await get('data/'+n+'.json'));
-const [Y,T]=days.length==2?days:[null,days[0]];
 const slug=n=>n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 const hasSeq=i=>i.seq!=null&&i.seq!=='';
-const url=i=>`https://www.abercrombie.com/shop/us/p/${slug(i.name)}-${i.id}${hasSeq(i)?'?seq='+encodeURIComponent(i.seq):''}`;
-const pct=i=>Math.round((1-i.sale/i.orig)*100);
+const url=i=>ABE()?`https://www.abercrombie.com/shop/us/p/${slug(i.name)}-${i.id}${hasSeq(i)?'?seq='+encodeURIComponent(i.seq):''}`:(i.url?(/^https?:/.test(i.url)?i.url:(i.url[0]==='/'?ORIGIN[store]+i.url:'#')):'#');
+const pct=i=>i.orig?Math.round((1-i.sale/i.orig)*100):null;
+const pv=i=>pct(i)==null?-1:pct(i);
+const pt=i=>pct(i)==null?'discount n/a':pct(i)+'% off';
+const priceH=i=>`${i.range?'<span class="sub">from</span> ':''}<b>${$$(i.sale)}</b>${i.orig?`<s>${$$(i.orig)}</s>`:''}`;
 const $$=v=>'$'+v.toFixed(2);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const dayHasSeq=d=>!!d&&d.items.some(hasSeq);
 // first per-colorway day vs an older day without seq: compare by product+name+orig instead
 const legacyCmp=(D,P)=>dayHasSeq(D)&&!!P&&!dayHasSeq(P);
-const keyFor=legacy=>i=>legacy?i.id+'|'+i.name+'|'+i.orig:(hasSeq(i)?i.id+'|'+i.seq:i.id);
+const keyFor=legacy=>i=>legacy?i.id+'|'+i.name+'|'+i.orig:(hasSeq(i)?i.id+'|'+i.seq:(ABE()?i.id:i.id+'|'+i.name));
 const minBy=(d,k)=>{const m={};if(d)for(const i of d.items){const x=k(i);if(!m[x]||i.sale<m[x].sale)m[x]=i}return m};
 const imgUrl=c=>`https://img.abercrombie.com/is/image/anf/KIC_${c}_prod1?policy=product-medium&wid=350&hei=438`;
 // per-colorway items use their own photo only; photos.json (by product id) is for old no-seq days
-const photo=i=>i.photo?imgUrl(i.photo):(!hasSeq(i)&&photos[i.id]?imgUrl(photos[i.id]):null);
+const photo=i=>i.photo?(ABE()?imgUrl(i.photo):i.photo):(ABE()&&!hasSeq(i)&&photos[i.id]?imgUrl(photos[i.id]):null);
 // favorites: saved in this browser only (localStorage), keyed id|seq (or id|name for old no-seq items)
 const FKEY='sale-tracker-favs';
 let favs={};try{favs=JSON.parse(localStorage.getItem(FKEY)||'{}')||{}}catch(e){favs={}}
@@ -29,31 +35,31 @@ const fk=i=>hasSeq(i)?i.id+'|'+i.seq:i.id+'|'+i.name;
 const wmeta=w=>({id:w.id,seq:w.seq,name:w.name,color:w.color||'',photo:''});
 // a browser that has never saved favorites starts from the repo watch list
 try{if(localStorage.getItem(FKEY)===null&&watch.items.length){for(const w of watch.items)favs[fk(w)]=wmeta(w);saveFavs()}}catch(e){}
-const star=i=>{const k=fk(i),on=!!favs[k];return `<span class="fav" role="button" tabindex="0" aria-label="Favorite" aria-pressed="${on}" data-k="${esc(k)}">${on?'\u2605':'\u2606'}</span>`};
-const tk=keyFor(legacyCmp(T,Y)),ym=minBy(Y,tk);
+const star=i=>{if(!ABE())return '';const k=fk(i),on=!!favs[k];return `<span class="fav" role="button" tabindex="0" aria-label="Favorite" aria-pressed="${on}" data-k="${esc(k)}">${on?'\u2605':'\u2606'}</span>`};
 const isNew=i=>Y&&!ym[tk(i)];
 function card(i,tags='',extra=''){const p=photo(i)||i._p;
-return `<a class="card" href="${url(i)}" target="_blank" rel="noopener"><div class="ph">${p?`<img loading="lazy" src="${p}" alt="" onerror="this.remove()">`:'<span class="nop">No photo</span>'}<span class="tag">${pct(i)}% off</span>${tags}${star(i)}</div><div class="info"><div class="nm">${esc(i.name)}</div><div class="cl">${esc(i.color||'')}</div><div class="pr"><b>${$$(i.sale)}</b><s>${$$(i.orig)}</s></div>${extra}</div></a>`}
+return `<a class="card" href="${url(i)}" target="_blank" rel="noopener"><div class="ph">${p?`<img loading="lazy" src="${p}" alt="" onerror="this.remove()">`:'<span class="nop">No photo</span>'}<span class="tag">${pt(i)}</span>${tags}${star(i)}</div><div class="info"><div class="nm">${esc(i.name)}</div><div class="cl">${esc(i.color||'')}</div><div class="pr">${priceH(i)}</div>${extra}</div></a>`}
 let vcat='all',vsort='off';
 const SKEY='sale-tracker-sections';
-let secOpen={b50:false,b40:false};try{Object.assign(secOpen,JSON.parse(localStorage.getItem(SKEY)||'{}'))}catch(e){}
+let secOpen={b50:false,b40:false,lo:false};try{Object.assign(secOpen,JSON.parse(localStorage.getItem(SKEY)||'{}'))}catch(e){}
 document.addEventListener('toggle',e=>{const d=e.target;if(d&&d.dataset&&d.dataset.s){secOpen[d.dataset.s]=d.open;try{localStorage.setItem(SKEY,JSON.stringify(secOpen))}catch(x){}}},true);
 const CATS=[['Swim',/swim|trunk/],['Outerwear',/jacket|coat|puffer|bomber|parka|vest|windbreaker|shacket|blazer|anorak/],['Sweaters',/sweater|cardigan|knit/],['Hoodies',/hoodie|afterhood|sweatshirt|fleece|zip/],['Underwear',/boxer|brief|underwear|socks?\b/],['Tees & tanks',/\btees?\b|t-shirt|tank|muscle|henley|jersey/],['Shirts & polos',/polo|shirt|flannel|oxford|button|popover/],['Bottoms',/\bpants?\b|\bshorts?\b(?![- ]sleeve)|jogger|jean|sweatpant|chino|trouser|cargo|denim|legging/]];
 const catOf=n=>{const t=String(n).toLowerCase();for(const [c,r] of CATS)if(r.test(t))return c;return 'Other'};
 function view(D,P,which){
+ if(!D.items.length)return `<p class="promo">${esc(D.promo||'')}</p><div class="empty big"><b>No items listed today</b></div>`;
  const its=D.items,hotAll=its.filter(i=>pct(i)>=60);
  const legacy=legacyCmp(D,P),k=keyFor(legacy),dm=minBy(P,k),cm=minBy(D,k);
  const newsAll=Object.values(cm).filter(i=>P&&!dm[k(i)]);
- const disc=its.filter(i=>pct(i)>=40);
+ const disc=ABE()?its.filter(i=>pct(i)>=40):its;
  const cn=c=>disc.filter(i=>catOf(i.name)===c).length;
  const cats=[...CATS.map(c=>c[0]),'Other'].filter(c=>cn(c)||newsAll.some(i=>catOf(i.name)===c));
  const vc=vcat==='all'||cats.includes(vcat)?vcat:'all',vs=vsort==='drop'&&!P?'off':vsort;
  const dropAmt=i=>dm[k(i)]?Math.max(0,dm[k(i)].sale-i.sale):0;
- const off=(a,b)=>pct(b)-pct(a)||a.sale-b.sale;
- const ord={off,price:(a,b)=>a.sale-b.sale||off(a,b),saved:(a,b)=>(b.orig-b.sale)-(a.orig-a.sale)||off(a,b),drop:(a,b)=>dropAmt(b)-dropAmt(a)||off(a,b)}[vs];
+ const off=(a,b)=>pv(b)-pv(a)||a.sale-b.sale;
+ const ord={off,price:(a,b)=>a.sale-b.sale||off(a,b),saved:(a,b)=>((b.orig||b.sale)-b.sale)-((a.orig||a.sale)-a.sale)||off(a,b),drop:(a,b)=>dropAmt(b)-dropAmt(a)||off(a,b)}[vs];
  const sel=a=>vc==='all'||catOf(a.name)===vc;
  const news=newsAll.filter(sel).sort(ord);
- const bands=[['b60','60%+ off',i=>pct(i)>=60],['b50','50\u201360% off',i=>pct(i)>=50&&pct(i)<60],['b40','40\u201350% off',i=>pct(i)>=40&&pct(i)<50]].map(([id,t,f])=>{const all=its.filter(f);return{id,t,all,list:all.filter(sel).sort(ord)}});
+ const bands=[['b60','60%+ off',i=>pct(i)>=60],['b50','50\u201360% off',i=>pct(i)>=50&&pct(i)<60],['b40','40\u201350% off',i=>pct(i)>=40&&pct(i)<50]].concat(ABE()?[]:[['lo','Under 40% off',i=>pct(i)!=null&&pct(i)<40],['na','Discount n/a (original price not shown)',i=>pct(i)==null]]).map(([id,t,f])=>{const all=its.filter(f);return{id,t,all,list:all.filter(sel).sort(ord)}});
  const tagsFor=i=>P&&!dm[k(i)]?'<span class="tag n">NEW</span>':(P&&dm[k(i)]&&i.sale<dm[k(i)].sale?'<span class="tag d">DROP</span>':'');
  const sec=(id,title,ct,body)=>`<details class="sec" data-s="${id}"${secOpen[id]!==false?' open':''}><summary><h2>${title} <span class="ct">${ct}</span></h2></summary>${body}</details>`;
  const of=(n,t)=>vc==='all'?n:n+' of '+t;
@@ -65,16 +71,15 @@ function view(D,P,which){
  const st=(n,l)=>`<div class="st"><b>${n}</b><span>${l}</span></div>`;
  const chip=(c,t,n)=>`<button class="chip" data-c="${esc(c)}" aria-pressed="${c===vc}">${esc(t)}${n!=null?` <i>${n}</i>`:''}</button>`;
  let o=`<div class="stats">${st(hotAll.length,'at 60%+ off')}${st(hotAll.filter(i=>pct(i)>=70).length,'at 70%+')}${P?st(newsAll.length,'new')+st(drops.length,'price drops')+st(gone.length,'gone'):''}${st(its.length,'listings')}</div>`;
- o+=`<p class="promo">${esc(D.promo||'')}${D.readable===false?' <b>Page could not be read fully.</b>':''}${legacy?' Colorway comparison starts next day; today is compared to yesterday by product, name and original price.':''}</p>`;
+ o+=`<p class="promo">${esc(D.promo||'')}${D.readable===false?' <b>Page could not be read fully.</b>':''}${!P&&D===T&&!ABE()?' Comparison starts tomorrow.':''}${legacy?' Colorway comparison starts next day; today is compared to yesterday by product, name and original price.':''}</p>`;
  o+=`<div class="controls"><div class="chips" role="group" aria-label="Category">${chip('all','All')}${cats.map(c=>chip(c,c,cn(c))).join('')}</div><label class="sort"><span class="sub">Sort</span><select id="vs">${[['off','Biggest discount %'],['saved','Biggest $ saved'],['price','Lowest price']].concat(P?[['drop','Biggest drop since yesterday']]:[]).map(([v,t])=>`<option value="${v}"${v===vs?' selected':''}>${t}</option>`).join('')}</select></label></div>`;
  for(const b of bands)o+=sec(b.id,b.t,of(b.list.length,b.all.length),b.list.length?`<div class="grid">${b.list.map(i=>card(i,tagsFor(i))).join('')}</div>`:none(vc==='all'?'Nothing in this range.':'Nothing matches this filter.'));
  if(P){
  o+=sec('new','New',`${of(news.length,newsAll.length)} since ${esc(P.label)}`,news.length?`<div class="grid">${news.map(i=>card(i)).join('')}</div>`:none('Nothing new.'));
- o+=sec('drops','Price drops',drops.length,rows(drops,i=>row(i,`<s>${$$(dm[k(i)].sale)}</s> \u2192 <b>${$$(i.sale)}</b> <span class="sub">${pct(i)}% off</span>`)));
- o+=sec('gone','Gone',gone.length,rows(gone,i=>row(i,`was ${$$(i.sale)}`)));}
+ o+=sec('drops','Price drops',drops.length,rows(drops,i=>row(i,`<s>${$$(dm[k(i)].sale)}</s> \u2192 ${priceH({sale:i.sale,range:i.range})} <span class="sub">${pt(i)}</span>`)));
+ o+=sec('gone','Gone',gone.length,rows(gone,i=>row(i,`was ${i.range?'from ':''}${$$(i.sale)}`)));}
  return o}
 const main=$('#view');let cur='t';
-const byKey={};for(const d of [Y,T])if(d)for(const i of d.items)byKey[fk(i)]=i;
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const fmtD=d=>{const [,m,dd]=String(d).split('-');return MON[+m-1]+' '+(+dd)};
 const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,'');
@@ -115,25 +120,42 @@ document.addEventListener('click',e=>{const t=e.target;if(t.id==='fcopy'){const 
   (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(done,()=>{window.prompt('Copy this watch list JSON:',txt)})}
  else if(t.id==='fimp'){for(const w of watch.items)if(!favs[fk(w)])favs[fk(w)]=wmeta(w);saveFavs();favCount();favView()}});
 document.addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const f=e.target.closest&&e.target.closest('.fav');if(!f)return;e.preventDefault();toggleFav(f.dataset.k)});
-function render(){if(cur==='f')favView();else $('#view').innerHTML=cur==='t'?view(T,Y):(Y?view(Y,null):'<div class="empty">No earlier day yet.</div>');favCount();
+function render(){if(cur==='f'&&ABE())favView();else if(!T)$('#view').innerHTML='<div class="empty big"><b>No data yet</b></div>';else $('#view').innerHTML=cur==='t'?view(T,Y):(Y?view(Y,null):'<div class="empty">No earlier day yet.</div>');favCount();
  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===cur))}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{cur=b.dataset.k;render()});
 
-{const f=(o)=>new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',...o}),now=new Date();
+function upd(){const u=$('#upd');if(!T){if(u)u.innerHTML='';return}
+ const f=(o)=>new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',...o}),now=new Date();
  const ny=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'}).format(now),hr=+f({hour:'numeric',hour12:false}).format(now)%24;
  const age=Math.round((Date.parse(ny+'T00:00:00Z')-Date.parse(T.date+'T00:00:00Z'))/864e5);
  const warn=age>=2||(age===1&&hr>=18);
- const u=$('#upd');if(u)u.innerHTML=`Last update: ${esc(T.label||fmtD(T.date))}`+(warn?` <b class="warn">No update for ${age} days \u2014 the daily run may have failed.</b>`:'')}
-render();
+ if(u)u.innerHTML=`Last update: ${esc(T.label||fmtD(T.date))}`+(warn?` <b class="warn">No update for ${age} days \u2014 the daily run may have failed.</b>`:'')}
+
 // More: full table
 let sortK='pct',asc=false,q='',flt='all';
-function tbl(){let r=T.items.map(i=>({...i,pct:pct(i)}));
- if(q)r=r.filter(i=>(i.name+' '+i.color+' '+i.id).toLowerCase().includes(q));
+function tbl(){if(!T){$('#tb').innerHTML='';$('#cnt').textContent='0 rows';return}
+ let r=T.items.map(i=>({...i,pct:pv(i)}));
+ if(q)r=r.filter(i=>(i.name+' '+(i.color||'')+' '+i.id).toLowerCase().includes(q));
  if(flt==='60')r=r.filter(i=>i.pct>=60);if(flt==='new')r=r.filter(isNew);
  r.sort((a,b)=>{const x=a[sortK],y=b[sortK];return(x>y?1:x<y?-1:0)*(asc?1:-1)});
- $('#tb').innerHTML=r.map(i=>`<tr><td>${star(i)} <a href="${url(i)}" target="_blank">${esc(i.name)}</a></td><td>${esc(i.color||'')}</td><td>${$$(i.sale)}</td><td>${$$(i.orig)}</td><td>${i.pct}%</td></tr>`).join('');$('#cnt').textContent=r.length+' rows'}
+ $('#tb').innerHTML=r.map(i=>`<tr><td>${star(i)} <a href="${url(i)}" target="_blank">${esc(i.name)}</a></td><td>${esc(i.color||'')}</td><td>${$$(i.sale)}</td><td>${i.orig?$$(i.orig):'n/a'}</td><td>${i.pct<0?'n/a':i.pct+'%'}</td></tr>`).join('');$('#cnt').textContent=r.length+' rows'}
 $('#q').oninput=e=>{q=e.target.value.toLowerCase();tbl()};$('#f').onchange=e=>{flt=e.target.value;tbl()};
 document.querySelectorAll('th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;asc=sortK===k?!asc:false;sortK=k;tbl()});
-tbl();
-$('#older').innerHTML=idx.days.slice(0,-2).reverse().map(d=>`<li>${esc(d)}</li>`).concat((idx.archive||[]).slice().reverse().map(a=>`<li>${esc(a.replace(/^archive\//,'').replace(/\.json$/,''))} (archived)</li>`)).join('')||'<li class="empty">No older days yet.</li>';
+function older(){$('#older').innerHTML=idx.days.slice(0,-2).reverse().map(d=>`<li>${esc(d)}</li>`).concat((idx.archive||[]).slice().reverse().map(a=>`<li>${esc(a.replace(/^archive\//,'').replace(/\.json$/,''))} (archived)</li>`)).join('')||'<li class="empty">No older days yet.</li>';}
+
+async function setStore(n){store=n;try{localStorage.setItem(STKEY,n)}catch(e){}
+ idx=(await get(base()+'index.json').catch(()=>null))||{days:[]};if(!idx.days)idx.days=[];
+ const ds=[];for(const x of idx.days.slice(-2)){const d=await get(base()+x+'.json').catch(()=>null);if(d&&d.items)ds.push(d)}
+ [Y,T]=ds.length==2?ds:[null,ds[0]||null];
+ tk=keyFor(legacyCmp(T,Y));ym=minBy(Y,tk);
+ byKey={};for(const d of [Y,T])if(d)for(const i of d.items)byKey[fk(i)]=i;
+ vcat='all';vsort='off';q='';flt='all';
+ const sq=$('#q');if(sq)sq.value='';const sf=$('#f');if(sf)sf.value='all';
+ if(!ABE()&&cur==='f')cur='t';
+ const fb=document.querySelector('.tabs button[data-k="f"]');if(fb)fb.style.display=ABE()?'':'none';
+ const it=STORES.find(x=>x[0]===store);const ti=$('.intro');if(ti)ti.firstChild.textContent=it[1]+' '+it[2];
+ const sw=$('#stores');if(sw)sw.innerHTML=STORES.map(x=>`<button class="chip" data-st="${x[0]}" aria-pressed="${x[0]===store}">${esc(x[1])}</button>`).join('');
+ upd();render();tbl();older()}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-st]');if(b&&b.dataset.st!==store)setStore(b.dataset.st)});
+await setStore(store);
 })();

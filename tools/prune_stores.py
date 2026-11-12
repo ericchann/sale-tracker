@@ -7,7 +7,7 @@ D = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
 keep = int(sys.argv[sys.argv.index('--keep') + 1]) if '--keep' in sys.argv else 60
 date = lambda n: datetime.date.fromisoformat(n[:10])
 changed = False
-for store in ('uniqlo', 'ralphlauren-polo', 'ralphlauren-boys', 'kith'):
+for store in ('uniqlo', 'ralphlauren-boys'):
     sd = os.path.join(D, store); ip = os.path.join(sd, 'index.json')
     if not os.path.exists(ip): continue
     ix = json.load(open(ip)); days = ix['days']

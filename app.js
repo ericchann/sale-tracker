@@ -1,12 +1,12 @@
 (async function(){
 const $=s=>document.querySelector(s);
 const get=async u=>window.__DATA__?window.__DATA__[u]:(await fetch(u)).json();
-const STORES=[['abercrombie','Abercrombie',"men's XS clearance"],['uniqlo','Uniqlo',"men's sale"],['ralphlauren-polo','Ralph Lauren Polo',"men's sale"],['ralphlauren-boys','Ralph Lauren Boys',"big boy sale"],['kith','Kith',"end-of-season event, men's items"]];
+const STORES=[['abercrombie','Abercrombie',"men's XS clearance"],['uniqlo','Uniqlo',"men's sale"],['ralphlauren-boys','Ralph Lauren Boys',"big boy sale"]];
 const STKEY='sale-tracker-store';
 let store='abercrombie';try{const q=localStorage.getItem(STKEY);if(STORES.some(x=>x[0]===q))store=q}catch(e){}
 const ABE=()=>store==='abercrombie';
 const base=()=>ABE()?'data/':'data/'+store+'/';
-const ORIGIN={uniqlo:'https://www.uniqlo.com','ralphlauren-polo':'https://www.ralphlauren.com','ralphlauren-boys':'https://www.ralphlauren.com',kith:'https://kith.com'};
+const ORIGIN={uniqlo:'https://www.uniqlo.com','ralphlauren-boys':'https://www.ralphlauren.com'};
 let idx={days:[]},Y=null,T=null,tk,ym,byKey={};
 const photos=await get('data/photos.json').catch(()=>({}));
 const watch=(await get('data/watch.json').catch(()=>null))||{items:[]};

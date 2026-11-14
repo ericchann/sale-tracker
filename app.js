@@ -65,10 +65,12 @@ const saleState=t=>{if(!t)return{k:'unk',big:'Sitewide sale: unknown'};
  const body=x.split(/[.|;]/).filter(p=>!/sign ?up|e-?mail|newsletter|\bapp\b|first order|subscribe|text /.test(p)).join(' ');
  if(/\d+\s?% off|site-?wide|extra \d+%|up to \d+%|\bbogo\b|buy \d+,? get/.test(body))return{k:'yes',big:'Sitewide sale'};
  return{k:'none',big:'No sitewide sale detected'}};
-const heroHTML=(D,notes)=>{const t=String(D.promo||'').trim(),has=t&&!/^not captured$/i.test(t),s=saleState(has?t:'');
- return `<section class="hero ${s.k}"><div class="big">${s.big}</div><p class="pt">${has?esc(t):'Promo banner not captured.'}</p>${notes?`<p class="sub">${notes}</p>`:''}</section>`};
+const TAG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg>';
+const saleBox=(promo,notes)=>{const t=String(promo||'').trim(),has=t&&!/^not captured$/i.test(t),s=saleState(has?t:''),lab={yes:'On',no:'None',none:'None detected',unk:'Unknown'}[s.k];
+ return `<div class="sale ${s.k}"><span class="sico">${TAG}</span><div class="sbody"><div class="stop"><span class="slabel">Sitewide sale</span><span class="sstate">${lab}</span></div><div class="stext" title="${esc(has?t:'')}">${has?esc(t):'Promo banner not captured.'}</div>${notes?`<div class="snote">${notes}</div>`:''}</div></div>`};
+let topInfo=null,railInfo=null;
 function view(D,P,which){
- if(!D.items.length)return heroHTML(D,'')+`<div class="empty big"><b>No items listed today</b></div>`;
+ if(!D.items.length){topInfo={promo:D.promo,notes:''};railInfo=null;return `<div class="empty big"><b>No items listed today</b></div>`}
  const its=D.items,hotAll=its.filter(i=>pct(i)>=60);
  const legacy=legacyCmp(D,P),k=keyFor(legacy),dm=minBy(P,k),cm=minBy(D,k);
  const newsAll=Object.values(cm).filter(i=>P&&!dm[k(i)]);
@@ -93,10 +95,9 @@ function view(D,P,which){
  const row=(i,right)=>{const p=photo(i);return `<li class="row"><a class="th" href="${url(i)}" target="_blank" rel="noopener">${p?`<img loading="lazy" src="${p}" alt="" onerror="this.remove()">`:''}</a><div class="rm"><a class="nm" href="${url(i)}" target="_blank" rel="noopener">${esc(i.name)}</a><div class="cl">${esc(i.color||'')}</div></div><div class="rp">${right}</div></li>`};
  const rows=(a,f)=>a.length?`<ul class="rows">${a.map(f).join('')}</ul>`:none('None.');
  const st=(n,l)=>`<div class="st"><b>${n}</b><span>${l}</span></div>`;
- const chip=(c,t,n)=>`<button class="chip" data-c="${esc(c)}" aria-pressed="${c===vc}">${esc(t)}${n!=null?` <i>${n}</i>`:''}</button>`;
  const notes=[D.readable===false?'<b>Page could not be read fully.</b>':'',!P&&D===T&&!ABE()?'Comparison starts tomorrow.':'',legacy?'Colorway comparison starts next day; today is compared to yesterday by product, name and original price.':''].filter(Boolean).join(' ');
- let o=`<div class="summary">${heroHTML(D,notes)}${P?st(newsAll.length,'new items'):''}</div>`;
- o+=`<div class="controls"><div class="chips" role="group" aria-label="Category">${chip('all','All')}${cats.map(c=>chip(c,c,cn(c))).join('')}</div><label class="sort"><span class="sub">Sort</span><select id="vs">${(FLAT()?[['price','Lowest price'],['pricehi','Highest price']]:[['off','Biggest discount %'],['saved','Biggest $ saved'],['price','Lowest price']]).concat(P?[['drop','Biggest drop since yesterday']]:[]).map(([v,t])=>`<option value="${v}"${v===vs?' selected':''}>${t}</option>`).join('')}</select></label></div>`;
+ topInfo={promo:D.promo,notes};railInfo={cats:cats.map(c=>[c,cn(c)]),all:disc.length,vc,vs,flat:FLAT(),hasP:!!P};
+ let o=P?`<div class="newchip">${newsAll.length} new item${newsAll.length===1?'':'s'}</div>`:'';
  if(FLAT()){const fl=its.filter(sel).sort(ord);o+=fl.length?`<div class="grid">${fl.map(i=>card(i,tagsFor(i))).join('')}</div>`:none(its.length?'Nothing matches this filter.':'No items listed today.')}
  else for(const b of bands)o+=sec(b.id,b.t,of(b.list.length,b.all.length),b.list.length?`<div class="grid">${b.list.map(i=>card(i,tagsFor(i))).join('')}</div>`:none(vc==='all'?'Nothing in this range.':'Nothing matches this filter.'));
  if(P){
@@ -136,16 +137,24 @@ async function favView(){
   const chg=prev?(last.i.sale<prev.i.sale?`<span class="chg dn">\u2193 ${$$(prev.i.sale-last.i.sale)} since ${fmtD(prev.d.date)}</span>`:last.i.sale>prev.i.sale?`<span class="chg up">\u2191 ${$$(last.i.sale-prev.i.sale)} since ${fmtD(prev.d.date)}</span>`:`<span class="chg">no change since ${fmtD(prev.d.date)}</span>`):'<span class="chg">first day tracked</span>';
   const extra=`<div class="hist"><div class="sub">${esc(storeName(sid))}</div>${spark(pts)}<div>${chg}</div><div class="sub">Low ${$$(Math.min(...v))} \u00b7 High ${$$(Math.max(...v))}</div>${listed?'':`<div class="sub"><b>Not listed ${esc(fmtD(lastD.date))}</b> \u2014 last seen ${esc(fmtD(last.d.date))}</div>`}<details><summary>Price history (${pts.length} day${pts.length>1?'s':''})</summary><div class="sub">${pts.map(p=>`<span class="nw">${fmtD(p.d.date)} ${$$(p.i.sale)}</span>`).join(' \u00b7 ')}</div></details></div>`;
   return card({...last.i,_p:f.photo,_s:sid},'',extra)}).join('');
- $('#view').innerHTML=`<h2>Tracking <span class="ct">${keys.length} item${keys.length===1?'':'s'} \u00b7 saved in this browser</span></h2><div class="grid favgrid">${cards}</div>`}
+ $('#view').innerHTML=`<p class="sub tcount">${keys.length} item${keys.length===1?'':'s'} \u00b7 saved in this browser</p><div class="grid favgrid">${cards}</div>`}
 function favCount(){const b=document.querySelector('.tabs button[data-k="f"]');if(b){const n=Object.keys(favs).length;b.innerHTML='Tracking'+(n?' <span class="bd">'+n+'</span>':'')}}
 function toggleFav(k){if(favs[k])delete favs[k];else{const i=byKey[k]||{};favs[k]={id:i.id,seq:i.seq,name:i.name,color:i.color||'',photo:photo(i)||'',store:sidOf(i)};if(!favs[k].id){const p=k.split('|');favs[k].id=p[0]}}
  saveFavs();document.querySelectorAll('.fav').forEach(e=>{if(e.dataset.k===k){const on=!!favs[k];e.setAttribute('aria-pressed',on)}});favCount();if(cur==='f')favView()}
 document.addEventListener('click',e=>{const f=e.target.closest&&e.target.closest('.fav');if(!f)return;e.preventDefault();e.stopPropagation();toggleFav(f.dataset.k)});
 document.addEventListener('change',e=>{const t=e.target;if(t.id==='vs'){vsort=t.value;render();const n=$('#vs');if(n)n.focus()}});
-document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('.chip');if(c){vcat=c.dataset.c;render();const n=document.querySelector('.chip[aria-pressed="true"]');if(n)n.focus()}});
+document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('[data-c]');if(c){vcat=c.dataset.c;render();const n=document.querySelector('.cat[aria-pressed="true"]');if(n)n.focus()}});
 document.addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const f=e.target.closest&&e.target.closest('.fav');if(!f)return;e.preventDefault();toggleFav(f.dataset.k)});
+function renderTop(){const el=$('#sale');if(el)el.innerHTML=(cur==='f'||!topInfo)?'':saleBox(topInfo.promo,topInfo.notes);
+ const h=$('#sname');if(h)h.textContent=cur==='f'?'Tracking':storeName(store)}
+function renderRail(){
+ const sw=$('#stores');if(sw)sw.innerHTML=STORES.map(x=>`<button class="srow" data-st="${x[0]}" aria-pressed="${x[0]===store}"><span class="sin">${esc(x[1][0])}</span>${esc(x[1])}</button>`).join('');
+ const sb=$('#sortbox'),cb=$('#catbox'),r=railInfo;
+ const opts=r?(r.flat?[['price','Lowest price'],['pricehi','Highest price']]:[['off','Biggest discount %'],['saved','Biggest $ saved'],['price','Lowest price']]).concat(r.hasP?[['drop','Biggest drop since yesterday']]:[]).map(([v,t])=>`<option value="${v}"${v===r.vs?' selected':''}>${t}</option>`).join(''):'';
+ if(sb)sb.innerHTML=r?`<h3>Sort</h3><select id="vs" aria-label="Sort">${opts}</select>`:'';
+ if(cb)cb.innerHTML=r?`<h3>Category</h3><div class="cats" role="group" aria-label="Category"><button class="cat" data-c="all" aria-pressed="${r.vc==='all'}"><span>All</span><i>${r.all}</i></button>${r.cats.map(([c,n])=>`<button class="cat" data-c="${esc(c)}" aria-pressed="${c===r.vc}"><span>${esc(c)}</span><i>${n}</i></button>`).join('')}</div>`:''}
 function render(){document.body.classList.toggle('trk',cur==='f'&&TRACK());
- if(cur==='f'&&TRACK())favView();else if(!T)$('#view').innerHTML='<div class="empty big"><b>No data yet</b></div>';else $('#view').innerHTML=view(T,Y);favCount();
+ if(cur==='f'&&TRACK())favView();else if(!T){$('#view').innerHTML='<div class="empty big"><b>No data yet</b></div>';topInfo=null;railInfo=null}else $('#view').innerHTML=view(T,Y);renderTop();renderRail();favCount();
  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===cur))}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{cur=b.dataset.k;render()});
 
@@ -181,7 +190,6 @@ async function setStore(n){store=n;try{localStorage.setItem(STKEY,n)}catch(e){}
  if(!TRACK()&&cur==='f')cur='t';
  const fb=document.querySelector('.tabs button[data-k="f"]');if(fb)fb.style.display=TRACK()?'':'none';
  const it=STORES.find(x=>x[0]===store);const ti=$('.intro');if(ti)ti.firstChild.textContent=it[1]+' '+it[2];
- const sw=$('#stores');if(sw)sw.innerHTML=STORES.map(x=>`<button class="chip" data-st="${x[0]}" aria-pressed="${x[0]===store}">${esc(x[1])}</button>`).join('');
  upd();render();tbl();older()}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-st]');if(b&&b.dataset.st!==store)setStore(b.dataset.st)});
 await setStore(store);

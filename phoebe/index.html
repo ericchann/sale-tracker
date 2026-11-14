@@ -4,34 +4,41 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Phoebe · Sale Tracker</title>
-<meta name="description" content="Daily price tracker for Abercrombie men's XS clearance: 60%+ off, new arrivals, price drops and favorites.">
-<meta name="theme-color" content="#fafaf8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#141413" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Daily price tracker for sale pages: 60%+ off, new arrivals, price drops and tracking.">
+<meta name="theme-color" content="#fff7fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#181215" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Phoebe · Sale Tracker">
-<meta property="og:description" content="Daily price tracker for Abercrombie men's XS clearance: 60%+ off, new arrivals, price drops and favorites.">
+<meta property="og:description" content="Daily price tracker for sale pages: 60%+ off, new arrivals, price drops and tracking.">
 <meta name="twitter:card" content="summary">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23c0262d'/%3E%3Ccircle cx='11' cy='11' r='2.8' fill='white'/%3E%3Ccircle cx='21' cy='21' r='2.8' fill='white'/%3E%3Cpath d='M22 9L10 23' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234a6a37'/%3E%3Ccircle cx='11' cy='11' r='2.8' fill='white'/%3E%3Ccircle cx='21' cy='21' r='2.8' fill='white'/%3E%3Cpath d='M22 9L10 23' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap">
 <link rel="stylesheet" href="../styles.css">
 </head>
-<body>
-<header class="top"><div class="bar">
-<div class="lead"><div class="brand"><span class="logo" aria-hidden="true">%</span><h1 id="ttl">Sale Tracker</h1></div><nav class="spaces" aria-label="Section"><a href="../eric/">Eric</a><a href="../phoebe/" aria-current="page">Phoebe</a></nav></div>
-<nav class="tabs" aria-label="Views"><button data-k="t" aria-pressed="true">Today</button><button data-k="f">Tracking</button></nav>
-</div></header>
-<main>
+<body class="p-phoebe">
+<div class="shell">
+<aside class="rail" aria-label="Menu">
+<a class="who" href="../eric/" aria-label="Switch to Eric"><span class="ava"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span><span class="wn"><b>Phoebe</b><i>tap to switch</i></span></a>
+<nav class="rblock" id="storebox" aria-label="Stores"><h3>Stores</h3><div class="stores" id="stores"></div></nav>
+<div class="rblock" id="sortbox"></div>
+<div class="rblock" id="catbox"></div>
+</aside>
+<div class="content">
+<div class="topbar"><div id="sale"></div><nav class="tabs" aria-label="Views"><button data-k="t" aria-pressed="true">Today</button><button data-k="f">Tracking</button></nav></div>
 <div id="stale" class="stale" hidden></div>
-<div class="chips stores" id="stores" role="group" aria-label="Store"></div>
-<div id="view" aria-live="polite"><div class="grid" aria-hidden="true"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
+<h1 id="sname" class="sname">&nbsp;</h1>
+<main>
+<div id="view" aria-live="polite"><div class="grid" aria-hidden="true"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
 <details class="more"><summary>Full table and older days</summary>
 <div class="tools"><input id="q" type="search" placeholder="Search name, color, id" aria-label="Search"><select id="f" aria-label="Filter"><option value="all">All</option><option value="60">60%+ off</option><option value="new">New today</option></select><span id="cnt" class="sub"></span></div>
 <div class="tw"><table><thead><tr><th data-k="name">Item</th><th data-k="color">Color</th><th data-k="sale">Sale</th><th data-k="orig">Orig</th><th data-k="pct">Off</th></tr></thead><tbody id="tb"></tbody></table></div>
 <h2>Older days</h2><ul class="l" id="older"></ul></details>
 </main>
 <footer class="foot"><p class="intro">Abercrombie men's XS clearance<span id="upd"></span></p></footer>
+</div>
+</div>
 <script>window.SALE_SPACE="phoebe";window.SALE_ROOT="../";</script>
 <script src="../app.js"></script>
 </body>

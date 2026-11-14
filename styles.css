@@ -114,3 +114,10 @@ details.sec:not([open])>summary{margin-bottom:0}
 .spacecard:hover{transform:translateY(-3px);box-shadow:var(--sh);border-color:color-mix(in srgb,var(--mut) 45%,var(--bd))}
 .spacecard b{font-size:22px;font-weight:650;letter-spacing:-.01em}.spacecard span{color:var(--mut);font-size:13px}
 .bar{min-height:61px}
+
+/* tracking icon (replaces the star) */
+.fav{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle}
+.fav svg{width:18px;height:18px;display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.fav[aria-pressed=true]{color:var(--blu)}
+.ph .fav[aria-pressed=true]{background:var(--blu);color:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.trk #stores,.trk .intro,.trk details.more{display:none}

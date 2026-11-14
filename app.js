@@ -8,14 +8,19 @@ if(!STORES.length)return;
 const STKEY='sale-tracker-store'+NS;
 let store=STORES[0][0];try{const q=localStorage.getItem(STKEY);if(STORES.some(x=>x[0]===q))store=q}catch(e){}
 const ABE=()=>store==='abercrombie';
-const base=()=>SPACE!=='eric'?'data/'+SPACE+'/'+store+'/':(ABE()?'data/':'data/'+store+'/');
+const baseOf=sid=>SPACE!=='eric'?'data/'+SPACE+'/'+sid+'/':(sid==='abercrombie'?'data/':'data/'+sid+'/');
+const base=()=>baseOf(store);
+const TRACK=()=>SPACE!=='eric'||ABE();
+const sidOf=i=>(i&&i._s)||store;
+const isAbe=i=>sidOf(i)==='abercrombie';
+const storeName=sid=>(STORES.find(x=>x[0]===sid)||[0,sid])[1];
 const ORIGIN={uniqlo:'https://www.uniqlo.com','ralphlauren-boys':'https://www.ralphlauren.com',dolcevita:'https://www.dolcevita.com',samedelman:'https://www.samedelman.com',zara:'https://www.zara.com',bershka:'https://www.bershka.com',jcrew:'https://www.jcrew.com'};
 let idx={days:[]},Y=null,T=null,tk,ym,byKey={};
 const photos=await get('data/photos.json').catch(()=>({}));
-const watch=(await get('data/watch.json').catch(()=>null))||{items:[]};
+const watch=(await get('data/watch-'+SPACE+'.json').catch(()=>null))||{items:[]};
 const slug=n=>n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 const hasSeq=i=>i.seq!=null&&i.seq!=='';
-const url=i=>ABE()?`https://www.abercrombie.com/shop/us/p/${slug(i.name)}-${i.id}${hasSeq(i)?'?seq='+encodeURIComponent(i.seq):''}`:(i.url?(/^https?:/.test(i.url)?i.url:(i.url[0]==='/'?ORIGIN[store]+i.url:'#')):'#');
+const url=i=>isAbe(i)?`https://www.abercrombie.com/shop/us/p/${slug(i.name)}-${i.id}${hasSeq(i)?'?seq='+encodeURIComponent(i.seq):''}`:(i.url?(/^https?:/.test(i.url)?i.url:(i.url[0]==='/'?ORIGIN[sidOf(i)]+i.url:'#')):'#');
 const pct=i=>i.orig?Math.round((1-i.sale/i.orig)*100):null;
 const pv=i=>pct(i)==null?-1:pct(i);
 const pt=i=>pct(i)==null?'discount n/a':pct(i)+'% off';
@@ -29,22 +34,24 @@ const keyFor=legacy=>i=>legacy?i.id+'|'+i.name+'|'+i.orig:(hasSeq(i)?i.id+'|'+i.
 const minBy=(d,k)=>{const m={};if(d)for(const i of d.items){const x=k(i);if(!m[x]||i.sale<m[x].sale)m[x]=i}return m};
 const imgUrl=c=>`https://img.abercrombie.com/is/image/anf/KIC_${c}_prod1?policy=product-medium&wid=350&hei=438`;
 // per-colorway items use their own photo only; photos.json (by product id) is for old no-seq days
-const photo=i=>i.photo?(ABE()?imgUrl(i.photo):i.photo):(ABE()&&!hasSeq(i)&&photos[i.id]?imgUrl(photos[i.id]):null);
+const photo=i=>i.photo?(isAbe(i)?imgUrl(i.photo):i.photo):(isAbe(i)&&!hasSeq(i)&&photos[i.id]?imgUrl(photos[i.id]):null);
 // favorites: saved in this browser only (localStorage), keyed id|seq (or id|name for old no-seq items)
 const FKEY='sale-tracker-favs'+NS;
 let favs={};try{favs=JSON.parse(localStorage.getItem(FKEY)||'{}')||{}}catch(e){favs={}}
 const saveFavs=()=>{try{localStorage.setItem(FKEY,JSON.stringify(favs))}catch(e){}};
-const fk=i=>hasSeq(i)?i.id+'|'+i.seq:i.id+'|'+i.name;
-const wmeta=w=>({id:w.id,seq:w.seq,name:w.name,color:w.color||'',photo:''});
+const fk=i=>{const k=hasSeq(i)?i.id+'|'+i.seq:i.id+'|'+i.name;return SPACE==='eric'?k:sidOf(i)+'|'+k};
+const wkey=w=>fk({...w,_s:w.store});
+const wmeta=w=>({id:w.id,seq:w.seq,name:w.name,color:w.color||'',photo:'',store:w.store||(SPACE==='eric'?'abercrombie':undefined)});
 // a browser that has never saved favorites starts from the repo watch list
-try{if(localStorage.getItem(FKEY)===null&&watch.items.length){for(const w of watch.items)favs[fk(w)]=wmeta(w);saveFavs()}}catch(e){}
-const star=i=>{if(!ABE())return '';const k=fk(i),on=!!favs[k];return `<span class="fav" role="button" tabindex="0" aria-label="Favorite" aria-pressed="${on}" data-k="${esc(k)}">${on?'\u2605':'\u2606'}</span>`};
+try{if(localStorage.getItem(FKEY)===null&&watch.items.length){for(const w of watch.items)favs[wkey(w)]=wmeta(w);saveFavs()}}catch(e){}
+const TRK='<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>';
+const star=i=>{if(!TRACK())return '';const k=fk(i),on=!!favs[k];return `<span class="fav" role="button" tabindex="0" aria-label="Track price" title="Track price" aria-pressed="${on}" data-k="${esc(k)}">${TRK}</span>`};
 const isNew=i=>Y&&!ym[tk(i)];
 function card(i,tags='',extra=''){const p=photo(i)||i._p;
 return `<a class="card" href="${url(i)}" target="_blank" rel="noopener"><div class="ph">${p?`<img loading="lazy" src="${p}" alt="" onerror="this.remove()">`:'<span class="nop">No photo</span>'}<span class="tag">${pt(i)}</span>${tags}${star(i)}</div><div class="info"><div class="nm">${esc(i.name)}</div><div class="cl">${esc(i.color||'')}</div><div class="pr">${priceH(i)}</div>${extra}</div></a>`}
 let vcat='all',vsort='off';
 const SKEY='sale-tracker-sections'+NS;
-let secOpen={b50:false,b40:false,lo:false};try{Object.assign(secOpen,JSON.parse(localStorage.getItem(SKEY)||'{}'))}catch(e){}
+let secOpen={};try{Object.assign(secOpen,JSON.parse(localStorage.getItem(SKEY)||'{}'))}catch(e){}
 document.addEventListener('toggle',e=>{const d=e.target;if(d&&d.dataset&&d.dataset.s){secOpen[d.dataset.s]=d.open;try{localStorage.setItem(SKEY,JSON.stringify(secOpen))}catch(x){}}},true);
 const CATS_E=[['Swim',/swim|trunk/],['Outerwear',/jacket|coat|puffer|bomber|parka|vest|windbreaker|shacket|blazer|anorak/],['Sweaters',/sweater|cardigan|knit/],['Hoodies',/hoodie|afterhood|sweatshirt|fleece|zip/],['Underwear',/boxer|brief|underwear|socks?\b/],['Tees & tanks',/\btees?\b|t-shirt|tank|muscle|henley|jersey/],['Shirts & polos',/polo|shirt|flannel|oxford|button|popover/],['Bottoms',/\bpants?\b|\bshorts?\b(?![- ]sleeve)|jogger|jean|sweatpant|chino|trouser|cargo|denim|legging/]];
 const CATS_W=[['Swim',/bikini|swim|one-piece|one-p\b|bathing|\bbottoms? only/],['Shoes',/\bshoes?\b|\bheels?\b|\bboots?\b|booties|bootie|\bflats?\b|sandal|sneaker|loafer|\bmules?\b|\bpumps?\b|\bclogs?\b|wedge|slipper|\bslides?\b|mary jane|ballet|platform|espadrille|trainer/],['Dresses & skirts',/dress|skirt|jumpsuit|romper|gown|\bskort|\bmidi|\bmaxi|\bmini\b/],['Outerwear',/jacket|coat|puffer|parka|blazer|\bvest\b|trench|\bcape\b|anorak|poncho|shacket|bomber|blouson/],['Hoodies',/hoodie|sweatsh|fleece|half-zip|quarter-zip|full-zip|\bterry\b/],['Sweaters',/sweater|sweatr|cardigan|\bknit|pullover|jumper|rollneck|crewn|v-nec|cashmere|turtle|mockneck|boatneck/],['Tops',/\btops?\b|\btees?\b|t-sh|t-shirt|\btank|blouse|shirt|bodysuit|\bcami\b|\bpolo\b|henley|tunic|button-up|button-down|\bjersey\b|rugby|\bcrop|long-sleev|short-sleev|sleeveless|dolman|three-quar|\bpolo/],['Bottoms',/\bpants?\b|\bshorts?\b(?![- ]sleeve)|jean|legging|jogger|sweatpant|trouser|culotte|chino|denim|cargo|\bjort|wide-leg|slim-wide|straight-leg|slim-straight|\bankl|flare|pintuck|full-length|\bcapri/],['Accessories',/\bbags?\b|\bbelt|scarf|\bhats?\b|glove|\bsocks?\b|jewel|necklace|earring|bracelet|\btote\b|purse|wallet|beanie|sunglass|\bwatch\b|minaudi|\bbra\b|pajama/]];
@@ -66,7 +73,9 @@ function view(D,P,which){
  const news=newsAll.filter(sel).sort(ord);
  const bands=[['b60','60%+ off',i=>pct(i)>=60],['b50','50\u201360% off',i=>pct(i)>=50&&pct(i)<60],['b40','40\u201350% off',i=>pct(i)>=40&&pct(i)<50]].concat(ABE()?[]:[['lo','Under 40% off',i=>pct(i)!=null&&pct(i)<40],['na','Discount n/a (original price not shown)',i=>pct(i)==null]]).map(([id,t,f])=>{const all=its.filter(f);return{id,t,all,list:all.filter(sel).sort(ord)}});
  const tagsFor=i=>P&&!dm[k(i)]?'<span class="tag n">NEW</span>':(P&&dm[k(i)]&&i.sale<dm[k(i)].sale?'<span class="tag d">DROP</span>':'');
- const sec=(id,title,ct,body)=>`<details class="sec" data-s="${id}"${secOpen[id]!==false?' open':''}><summary><h2>${title} <span class="ct">${ct}</span></h2></summary>${body}</details>`;
+ const firstBand=(bands.find(b=>b.all.length)||bands[0]).id;
+ const isOpen=id=>secOpen[id]!==undefined?secOpen[id]:(!/^(b60|b50|b40|lo|na)$/.test(id)||id===firstBand); // your own choice wins; otherwise the first non-empty discount band is open
+ const sec=(id,title,ct,body)=>`<details class="sec" data-s="${id}"${isOpen(id)?' open':''}><summary><h2>${title} <span class="ct">${ct}</span></h2></summary>${body}</details>`;
  const of=(n,t)=>vc==='all'?n:n+' of '+t;
  const drops=Object.values(cm).filter(i=>P&&dm[k(i)]&&i.sale<dm[k(i)].sale);
  const gone=P?Object.values(dm).filter(i=>!cm[k(i)]):[];
@@ -90,42 +99,48 @@ const fmtD=d=>{const [,m,dd]=String(d).split('-');return MON[+m-1]+' '+(+dd)};
 const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,'');
 // a favorite matches its id+seq on per-colorway days, and id+name (lowest price) on older days
 const matchDay=(f,D)=>{let m=null;for(const i of D.items){const ok=f.seq&&hasSeq(i)?i.id===f.id&&String(i.seq)===String(f.seq):i.id===f.id&&norm(i.name)===norm(f.name);if(ok&&(!m||i.sale<m.sale))m=i}return m};
-let allDays=null;
+const dayCache={};
 const COLS=['id','seq','name','color','sale','orig'];
-const unpack=a=>a.days.map(d=>({date:d.date,label:d.label,items:d.items.map(r=>{const o={};COLS.forEach((c,n)=>{if(r[n]!==''&&r[n]!=null)o[c]=r[n]});return o})}));
-const loadAll=async()=>allDays||(allDays=await(async()=>{
- const cur=await Promise.all(idx.days.filter(n=>!/baseline/.test(n)).map(n=>get('data/'+n+'.json')));
- const arch=(await Promise.all((idx.archive||[]).map(a=>get('data/'+a)))).flatMap(unpack);
- return arch.concat(cur).sort((a,b)=>String(a.date)<String(b.date)?-1:1)})());
+const unpack=a=>a.days.map(d=>({date:d.date,label:d.label,items:d.items.map(r=>{if(!Array.isArray(r))return r;const o={};COLS.forEach((c,n)=>{if(r[n]!==''&&r[n]!=null)o[c]=r[n]});return o})}));
+const fixColors=d=>{if(SPACE!=='eric')for(const i of d.items)if(/^[A-Z]{2}\d{4}$/.test(i.color||''))i.color='';return d};
+const loadAllFor=sid=>dayCache[sid]||(dayCache[sid]=(async()=>{
+ const b=baseOf(sid),ix=(await get(b+'index.json').catch(()=>null))||{days:[]};
+ const cur=(await Promise.all((ix.days||[]).filter(n=>!/baseline/.test(n)).map(n=>get(b+n+'.json').catch(()=>null)))).filter(d=>d&&d.items);
+ const arch=(await Promise.all((ix.archive||[]).map(a=>get('data/'+a).catch(()=>null)))).filter(Boolean).flatMap(unpack);
+ return arch.concat(cur).map(fixColors).sort((a,b)=>String(a.date)<String(b.date)?-1:1)})());
 const spark=pts=>{if(pts.length<2)return '';const v=pts.map(p=>p.i.sale),lo=Math.min(...v),hi=Math.max(...v),W=120,H=28;
  const x=n=>n*(W-6)/(pts.length-1)+3,y=v=>hi===lo?H/2:H-3-(v-lo)*(H-6)/(hi-lo);
  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts.map((p,n)=>x(n).toFixed(1)+','+y(p.i.sale).toFixed(1)).join(' ')}"/></svg>`};
 async function favView(){
- const keys=Object.keys(favs),wset=new Set(watch.items.map(fk));
- const panel=`<details class="sync"><summary>Sync and alerts</summary><div class="syncb"><p class="sub">${watch.items.length} item${watch.items.length===1?'':'s'} in the repo watch list. The daily run sends alerts for them, and any device can import them. To update it: copy, paste over the file on GitHub, then commit.</p><div class="btns"><button id="fcopy">Copy favorites as watch list</button><a href="https://github.com/ericchann/sale-tracker/edit/main/data/watch.json" target="_blank" rel="noopener">Edit on GitHub</a><button id="fimp">Import watch list</button></div></div></details>`;
- if(!keys.length){$('#view').innerHTML=panel+'<div class="empty big"><b>No favorites yet</b><span>Tap the star on any item to track its price over time.</span></div>';return}
+ const sidF=f=>f.store||'abercrombie',order=sid=>{const n=STORES.findIndex(x=>x[0]===sid);return n<0?99:n};
+ const keys=Object.keys(favs).sort((a,b)=>order(sidF(favs[a]))-order(sidF(favs[b]))),wset=new Set(watch.items.map(wkey));
+ const who=SPACE==='eric'?"Eric's":"Phoebe's",wf='watch-'+SPACE+'.json';
+ const panel=`<details class="sync"><summary>Sync and alerts</summary><div class="syncb"><p class="sub">${watch.items.length} item${watch.items.length===1?'':'s'} in ${who} watch list (data/${wf}). The daily run sends alerts for these, and any device can import them. To update it: copy, paste over the file on GitHub, then commit.</p><div class="btns"><button id="fcopy">Copy tracked items as watch list</button><a href="https://github.com/ericchann/sale-tracker/edit/main/data/${wf}" target="_blank" rel="noopener">Edit on GitHub</a><button id="fimp">Import watch list</button></div></div></details>`;
+ if(!keys.length){$('#view').innerHTML=panel+'<div class="empty big"><b>Nothing tracked yet</b><span>Tap the graph icon on any item to follow its price over time.</span></div>';return}
  $('#view').innerHTML=panel+'<div class="empty">Loading history\u2026</div>';
- const D=await loadAll();if(cur!=='f')return;
- const lastD=D[D.length-1];
- const cards=keys.map(k=>{const f=favs[k],pts=[];for(const d of D){const m=matchDay(f,d);if(m)pts.push({d,i:m})}
-  const last=pts[pts.length-1];if(!last)return `<div class="note">${esc(f.name)} ${esc(f.color||'')} \u2014 not seen in any day yet. ${star(f)}</div>`;
+ const sids=[...new Set(keys.map(k=>sidF(favs[k])))],Ds={};
+ await Promise.all(sids.map(async sid=>{Ds[sid]=await loadAllFor(sid)}));if(cur!=='f')return;
+ const cards=keys.map(k=>{const f=favs[k],sid=sidF(f),D=Ds[sid],pts=[];for(const d of D){const m=matchDay(f,d);if(m)pts.push({d,i:m})}
+  const lastD=D[D.length-1];
+  const last=pts[pts.length-1];if(!last)return `<div class="note">${esc(f.name)} ${esc(f.color||'')} \u2014 not seen in any day yet. ${star({...f,_s:sid})}</div>`;
   const prev=pts[pts.length-2],listed=last.d===lastD,v=pts.map(p=>p.i.sale);
   const chg=prev?(last.i.sale<prev.i.sale?`<span class="chg dn">\u2193 ${$$(prev.i.sale-last.i.sale)} since ${fmtD(prev.d.date)}</span>`:last.i.sale>prev.i.sale?`<span class="chg up">\u2191 ${$$(last.i.sale-prev.i.sale)} since ${fmtD(prev.d.date)}</span>`:`<span class="chg">no change since ${fmtD(prev.d.date)}</span>`):'<span class="chg">first day tracked</span>';
-  const extra=`<div class="hist">${spark(pts)}<div>${chg}</div><div class="sub">Low ${$$(Math.min(...v))} \u00b7 High ${$$(Math.max(...v))}</div>${listed?'':`<div class="sub"><b>Not listed ${esc(fmtD(lastD.date))}</b> \u2014 last seen ${esc(fmtD(last.d.date))}</div>`}<span class="pill${wset.has(k)?' on':''}">${wset.has(k)?'Alerts on':'No alerts'}</span><details><summary>Price history (${pts.length} day${pts.length>1?'s':''})</summary><div class="sub">${pts.map(p=>`<span class="nw">${fmtD(p.d.date)} ${$$(p.i.sale)}</span>`).join(' \u00b7 ')}</div></details></div>`;
-  return card({...last.i,_p:f.photo},'',extra)}).join('');
- $('#view').innerHTML=panel+`<h2>Favorites <span class="ct">${keys.length} tracked \u00b7 saved in this browser</span></h2><div class="grid favgrid">${cards}</div>`}
-function favCount(){const b=document.querySelector('.tabs button[data-k="f"]');if(b){const n=Object.keys(favs).length;b.innerHTML='Favorites'+(n?' <span class="bd">'+n+'</span>':'')}}
-function toggleFav(k){if(favs[k])delete favs[k];else{const i=byKey[k]||{};favs[k]={id:i.id,seq:i.seq,name:i.name,color:i.color||'',photo:photo(i)||''};if(!favs[k].id){const p=k.split('|');favs[k].id=p[0]}}
- saveFavs();document.querySelectorAll('.fav').forEach(e=>{if(e.dataset.k===k){const on=!!favs[k];e.setAttribute('aria-pressed',on);e.textContent=on?'\u2605':'\u2606'}});favCount();if(cur==='f')favView()}
+  const extra=`<div class="hist">${SPACE==='eric'?'':`<div class="sub">${esc(storeName(sid))}</div>`}${spark(pts)}<div>${chg}</div><div class="sub">Low ${$$(Math.min(...v))} \u00b7 High ${$$(Math.max(...v))}</div>${listed?'':`<div class="sub"><b>Not listed ${esc(fmtD(lastD.date))}</b> \u2014 last seen ${esc(fmtD(last.d.date))}</div>`}<span class="pill${wset.has(k)?' on':''}">${wset.has(k)?'Alerts on':'No alerts'}</span><details><summary>Price history (${pts.length} day${pts.length>1?'s':''})</summary><div class="sub">${pts.map(p=>`<span class="nw">${fmtD(p.d.date)} ${$$(p.i.sale)}</span>`).join(' \u00b7 ')}</div></details></div>`;
+  return card({...last.i,_p:f.photo,_s:sid},'',extra)}).join('');
+ $('#view').innerHTML=panel+`<h2>Tracking <span class="ct">${keys.length} item${keys.length===1?'':'s'} \u00b7 saved in this browser</span></h2><div class="grid favgrid">${cards}</div>`}
+function favCount(){const b=document.querySelector('.tabs button[data-k="f"]');if(b){const n=Object.keys(favs).length;b.innerHTML='Tracking'+(n?' <span class="bd">'+n+'</span>':'')}}
+function toggleFav(k){if(favs[k])delete favs[k];else{const i=byKey[k]||{};favs[k]={id:i.id,seq:i.seq,name:i.name,color:i.color||'',photo:photo(i)||'',store:sidOf(i)};if(!favs[k].id){const p=k.split('|');favs[k].id=p[0]}}
+ saveFavs();document.querySelectorAll('.fav').forEach(e=>{if(e.dataset.k===k){const on=!!favs[k];e.setAttribute('aria-pressed',on)}});favCount();if(cur==='f')favView()}
 document.addEventListener('click',e=>{const f=e.target.closest&&e.target.closest('.fav');if(!f)return;e.preventDefault();e.stopPropagation();toggleFav(f.dataset.k)});
 document.addEventListener('change',e=>{const t=e.target;if(t.id==='vs'){vsort=t.value;render();const n=$('#vs');if(n)n.focus()}});
 document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('.chip');if(c){vcat=c.dataset.c;render();const n=document.querySelector('.chip[aria-pressed="true"]');if(n)n.focus()}});
-document.addEventListener('click',e=>{const t=e.target;if(t.id==='fcopy'){const txt=JSON.stringify({items:Object.values(favs).map(f=>{const o={id:f.id};if(f.seq)o.seq=f.seq;o.name=f.name;if(f.color)o.color=f.color;return o})},null,2)+'\n';
-  const done=()=>{t.textContent='Copied!';setTimeout(()=>{t.textContent='Copy favorites as watch list'},1500)};
+document.addEventListener('click',e=>{const t=e.target;if(t.id==='fcopy'){const txt=JSON.stringify({items:Object.values(favs).map(f=>{const o={};if(SPACE!=='eric')o.store=f.store;o.id=f.id;if(f.seq)o.seq=f.seq;o.name=f.name;if(f.color)o.color=f.color;return o})},null,2)+'\n';
+  const done=()=>{t.textContent='Copied!';setTimeout(()=>{t.textContent='Copy tracked items as watch list'},1500)};
   (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(done,()=>{window.prompt('Copy this watch list JSON:',txt)})}
- else if(t.id==='fimp'){for(const w of watch.items)if(!favs[fk(w)])favs[fk(w)]=wmeta(w);saveFavs();favCount();favView()}});
+ else if(t.id==='fimp'){for(const w of watch.items)if(!favs[wkey(w)])favs[wkey(w)]=wmeta(w);saveFavs();favCount();favView()}});
 document.addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const f=e.target.closest&&e.target.closest('.fav');if(!f)return;e.preventDefault();toggleFav(f.dataset.k)});
-function render(){if(cur==='f'&&ABE())favView();else if(!T)$('#view').innerHTML='<div class="empty big"><b>No data yet</b></div>';else $('#view').innerHTML=cur==='t'?view(T,Y):(Y?view(Y,null):'<div class="empty">No earlier day yet.</div>');favCount();
+function render(){document.body.classList.toggle('trk',cur==='f'&&TRACK());
+ if(cur==='f'&&TRACK())favView();else if(!T)$('#view').innerHTML='<div class="empty big"><b>No data yet</b></div>';else $('#view').innerHTML=view(T,Y);favCount();
  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===cur))}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{cur=b.dataset.k;render()});
 
@@ -157,8 +172,8 @@ async function setStore(n){store=n;try{localStorage.setItem(STKEY,n)}catch(e){}
  byKey={};for(const d of [Y,T])if(d)for(const i of d.items)byKey[fk(i)]=i;
  vcat='all';vsort='off';q='';flt='all';
  const sq=$('#q');if(sq)sq.value='';const sf=$('#f');if(sf)sf.value='all';
- if(!ABE()&&cur==='f')cur='t';
- const fb=document.querySelector('.tabs button[data-k="f"]');if(fb)fb.style.display=ABE()?'':'none';
+ if(!TRACK()&&cur==='f')cur='t';
+ const fb=document.querySelector('.tabs button[data-k="f"]');if(fb)fb.style.display=TRACK()?'':'none';
  const it=STORES.find(x=>x[0]===store);const ti=$('.intro');if(ti)ti.firstChild.textContent=it[1]+' '+it[2];
  const sw=$('#stores');if(sw)sw.innerHTML=STORES.map(x=>`<button class="chip" data-st="${x[0]}" aria-pressed="${x[0]===store}">${esc(x[1])}</button>`).join('');
  upd();render();tbl();older()}

@@ -1,8 +1,11 @@
 (async function(){
 const $=s=>document.querySelector(s);
-const get=async u=>window.__DATA__?window.__DATA__[u]:(await fetch(u)).json();
-const STORES=[['abercrombie','Abercrombie',"men's XS clearance"],['uniqlo','Uniqlo',"men's sale"],['ralphlauren-boys','Ralph Lauren Boys',"big boy sale"]];
-const STKEY='sale-tracker-store';
+const ROOT=window.SALE_ROOT||'',SPACE=window.SALE_SPACE||'eric',NS=SPACE==='eric'?'':'-'+SPACE;
+const get=async u=>window.__DATA__?window.__DATA__[u]:(await fetch(ROOT+u)).json();
+const SPACES={eric:[['abercrombie','Abercrombie',"men's XS clearance"],['uniqlo','Uniqlo',"men's sale"],['ralphlauren-boys','Ralph Lauren Boys',"big boy sale"]],phoebe:[]};
+const STORES=SPACES[SPACE]||[];
+if(!STORES.length)return;
+const STKEY='sale-tracker-store'+NS;
 let store='abercrombie';try{const q=localStorage.getItem(STKEY);if(STORES.some(x=>x[0]===q))store=q}catch(e){}
 const ABE=()=>store==='abercrombie';
 const base=()=>ABE()?'data/':'data/'+store+'/';
@@ -28,7 +31,7 @@ const imgUrl=c=>`https://img.abercrombie.com/is/image/anf/KIC_${c}_prod1?policy=
 // per-colorway items use their own photo only; photos.json (by product id) is for old no-seq days
 const photo=i=>i.photo?(ABE()?imgUrl(i.photo):i.photo):(ABE()&&!hasSeq(i)&&photos[i.id]?imgUrl(photos[i.id]):null);
 // favorites: saved in this browser only (localStorage), keyed id|seq (or id|name for old no-seq items)
-const FKEY='sale-tracker-favs';
+const FKEY='sale-tracker-favs'+NS;
 let favs={};try{favs=JSON.parse(localStorage.getItem(FKEY)||'{}')||{}}catch(e){favs={}}
 const saveFavs=()=>{try{localStorage.setItem(FKEY,JSON.stringify(favs))}catch(e){}};
 const fk=i=>hasSeq(i)?i.id+'|'+i.seq:i.id+'|'+i.name;
@@ -40,7 +43,7 @@ const isNew=i=>Y&&!ym[tk(i)];
 function card(i,tags='',extra=''){const p=photo(i)||i._p;
 return `<a class="card" href="${url(i)}" target="_blank" rel="noopener"><div class="ph">${p?`<img loading="lazy" src="${p}" alt="" onerror="this.remove()">`:'<span class="nop">No photo</span>'}<span class="tag">${pt(i)}</span>${tags}${star(i)}</div><div class="info"><div class="nm">${esc(i.name)}</div><div class="cl">${esc(i.color||'')}</div><div class="pr">${priceH(i)}</div>${extra}</div></a>`}
 let vcat='all',vsort='off';
-const SKEY='sale-tracker-sections';
+const SKEY='sale-tracker-sections'+NS;
 let secOpen={b50:false,b40:false,lo:false};try{Object.assign(secOpen,JSON.parse(localStorage.getItem(SKEY)||'{}'))}catch(e){}
 document.addEventListener('toggle',e=>{const d=e.target;if(d&&d.dataset&&d.dataset.s){secOpen[d.dataset.s]=d.open;try{localStorage.setItem(SKEY,JSON.stringify(secOpen))}catch(x){}}},true);
 const CATS=[['Swim',/swim|trunk/],['Outerwear',/jacket|coat|puffer|bomber|parka|vest|windbreaker|shacket|blazer|anorak/],['Sweaters',/sweater|cardigan|knit/],['Hoodies',/hoodie|afterhood|sweatshirt|fleece|zip/],['Underwear',/boxer|brief|underwear|socks?\b/],['Tees & tanks',/\btees?\b|t-shirt|tank|muscle|henley|jersey/],['Shirts & polos',/polo|shirt|flannel|oxford|button|popover/],['Bottoms',/\bpants?\b|\bshorts?\b(?![- ]sleeve)|jogger|jean|sweatpant|chino|trouser|cargo|denim|legging/]];

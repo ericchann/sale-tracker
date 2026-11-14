@@ -104,3 +104,13 @@ details.sec>summary::after{content:"";flex:none;width:8px;height:8px;border-righ
 details.sec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
 details.sec>summary:hover h2{color:var(--blu)}
 details.sec:not([open])>summary{margin-bottom:0}
+
+/* sections (Eric / Phoebe) */
+.lead{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.spaces{display:flex;gap:2px}.spaces a{color:var(--mut);text-decoration:none;font-size:14px;font-weight:500;padding:5px 12px;border-radius:99px;transition:color .15s,background .15s}
+.spaces a:hover{color:var(--fg)}.spaces a[aria-current=page]{color:var(--fg);background:var(--bd)}
+.spacegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:20px;max-width:720px}
+.spacecard{display:flex;flex-direction:column;gap:6px;padding:28px 24px;border:1px solid var(--bd);border-radius:var(--r);background:var(--card);text-decoration:none;color:inherit;transition:transform .2s,box-shadow .2s,border-color .2s}
+.spacecard:hover{transform:translateY(-3px);box-shadow:var(--sh);border-color:color-mix(in srgb,var(--mut) 45%,var(--bd))}
+.spacecard b{font-size:22px;font-weight:650;letter-spacing:-.01em}.spacecard span{color:var(--mut);font-size:13px}
+.bar{min-height:61px}

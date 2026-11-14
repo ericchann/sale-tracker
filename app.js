@@ -192,5 +192,13 @@ async function setStore(n){store=n;try{localStorage.setItem(STKEY,n)}catch(e){}
  const it=STORES.find(x=>x[0]===store);const ti=$('.intro');if(ti)ti.firstChild.textContent=it[1]+' '+it[2];
  upd();render();tbl();older()}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-st]');if(b&&b.dataset.st!==store)setStore(b.dataset.st)});
+// boxes per row: a slider in the left column (saved in this browser; the phone and the computer keep their own value)
+{const mq=window.matchMedia?matchMedia('(max-width:900px)'):{matches:false},KEY='sale-tracker-cols'+NS,sl=$('#cols'),lab=$('#colsv');
+ let saved={};try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){}
+ const apply=()=>{const m=mq.matches,min=m?1:2,max=m?4:8,v=Math.max(min,Math.min(max,+saved[m?'m':'d']||(m?2:4)));
+  if(sl){sl.min=min;sl.max=max;sl.value=v}if(lab)lab.textContent=v;
+  document.documentElement.style.setProperty('--cols',v);document.body.classList.toggle('dense',v>=(m?3:6))};
+ if(sl)sl.oninput=()=>{saved[mq.matches?'m':'d']=+sl.value;try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(e){}apply()};
+ if(mq.addEventListener)mq.addEventListener('change',apply);apply()}
 await setStore(store);
 })();

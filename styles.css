@@ -1,19 +1,11 @@
 /* ---------- themes: Eric = blues (default), Phoebe = pastel pink + matcha ---------- */
-:root{--bg:#f5f9fe;--fg:#0d2340;--mut:#4a6283;--card:#fff;--bd:#d6e2f2;--soft:#e4eefb;--soft2:#edf4fd;
+:root{color-scheme:light;--bg:#f5f9fe;--fg:#0d2340;--mut:#4a6283;--card:#fff;--bd:#d6e2f2;--soft:#e4eefb;--soft2:#edf4fd;
 --acc:#1f5fa8;--acc-ink:#fff;--acc-d:#0f3d7a;--tag-bg:#1f5fa8;--tag-fg:#fff;--price:#1f5fa8;
 --red:#c0262d;--grn:#1f7a45;--on-grn:#fff;--drop:#1f5fa8;--on-drop:#fff;
 --r:14px;--sh:0 10px 28px rgba(13,35,64,.10);--font:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 body.p-phoebe{--bg:#fff7fa;--fg:#3b2d34;--mut:#7a5c69;--card:#fff;--bd:#f0d6df;--soft:#fde6ee;--soft2:#eef4e4;
 --acc:#4a6a37;--acc-ink:#fff;--acc-d:#3f5c2d;--tag-bg:#f7c4d5;--tag-fg:#3b2d34;--price:#4a6a37;
 --grn:#4a6a37;--on-grn:#fff;--drop:#c2547a;--on-drop:#fff;--sh:0 10px 28px rgba(59,45,52,.10)}
-@media(prefers-color-scheme:dark){
-:root{color-scheme:dark;--bg:#0a1626;--fg:#e6f0fc;--mut:#93abc9;--card:#11233b;--bd:#223e63;--soft:#0f2038;--soft2:#13294a;
---acc:#6fb1ff;--acc-ink:#0a1626;--acc-d:#9cc9ff;--tag-bg:#6fb1ff;--tag-fg:#0a1626;--price:#7bb8ff;
---red:#ff7b80;--grn:#5fd18a;--on-grn:#08210f;--drop:#6fb1ff;--on-drop:#0a1626;--sh:0 10px 28px rgba(0,0,0,.5)}
-body.p-phoebe{--bg:#181215;--fg:#f7eaf0;--mut:#c9a9b6;--card:#231a1e;--bd:#3c2b33;--soft:#2a1d23;--soft2:#1f2a1b;
---acc:#a9c98f;--acc-ink:#1a2314;--acc-d:#c3dca9;--tag-bg:#f2a9c2;--tag-fg:#2a1820;--price:#b5d49b;
---grn:#a9c98f;--on-grn:#1a2314;--drop:#f2a9c2;--on-drop:#2a1820}}
-
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased;font-feature-settings:"cv11","ss01"}
@@ -38,6 +30,8 @@ h2 .ct{color:var(--mut);font-weight:500;font-size:13px}
 .srow .sin{flex:none;width:28px;height:28px;border-radius:9px;background:var(--soft);color:var(--acc-d);display:grid;place-items:center;font-size:13px;font-weight:700}
 .srow[aria-pressed=true]{background:var(--acc);color:var(--acc-ink);box-shadow:0 3px 10px color-mix(in srgb,var(--acc) 38%,transparent)}
 .srow[aria-pressed=true] .sin{background:rgba(255,255,255,.24);color:inherit}
+.rblock h3 .cv{float:right;color:var(--fg);letter-spacing:0;font-size:12px}
+.rblock input[type=range]{width:100%;accent-color:var(--acc);margin:4px 0 0}
 .rblock select{width:100%;border:1px solid var(--bd);border-radius:10px;background:var(--card);padding:10px 12px;font-size:14px}
 .cats{display:flex;flex-direction:column;gap:1px}
 .cat{display:flex;justify-content:space-between;gap:8px;width:100%;padding:7px 10px;border:0;border-radius:8px;background:transparent;font-size:14px;text-align:left;cursor:pointer}
@@ -70,8 +64,12 @@ h2 .ct{color:var(--mut);font-weight:500;font-size:13px}
 .stale[hidden]{display:none}
 
 /* ---------- grid + cards ---------- */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:14px}
-@media(min-width:900px){.grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:18px}}
+.grid{display:grid;grid-template-columns:repeat(var(--cols,4),minmax(0,1fr));gap:18px}
+@media(max-width:900px){.grid{gap:12px}}
+/* many boxes per row: tighter cards */
+body.dense .info{padding:7px 8px 9px;font-size:11px}body.dense .cl{display:none}body.dense .pr b{font-size:12px}body.dense .pr s{margin-left:4px}
+body.dense .tag{font-size:9.5px;padding:1px 6px;top:5px;left:5px}body.dense .tag.n,body.dense .tag.d{left:auto;right:5px}
+body.dense .ph .fav{width:26px;height:26px;right:5px;bottom:5px}body.dense .fav svg{width:15px;height:15px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:transform .2s,box-shadow .2s,border-color .2s}
 .card:hover{transform:translateY(-3px);box-shadow:var(--sh);border-color:color-mix(in srgb,var(--mut) 45%,var(--bd))}
 .ph{aspect-ratio:3/4;background:var(--soft);display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:12px;position:relative;overflow:hidden}
@@ -138,7 +136,7 @@ ul.l{list-style:none;padding:0;margin:0}ul.l li{padding:6px 0;border-bottom:1px 
 @keyframes sh{to{background-position:-200% 0}}
 
 /* Tracking tab: the rail only keeps the person button */
-.trk #storebox,.trk #sortbox,.trk #catbox,.trk details.more,.trk .foot{display:none}
+.trk #storebox,.trk #sortbox,.trk #catbox,.trk details.more,.trk .foot{display:none}  /* the boxes-per-row slider stays */
 
 /* ---------- landing page (root) ---------- */
 .top{border-bottom:1px solid var(--bd);background:var(--bg)}

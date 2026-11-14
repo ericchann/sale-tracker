@@ -2,7 +2,8 @@
 """Print watch-list alerts (empty output = nothing to report).
 
 Two personal lists live in the repo:
-  data/watch-eric.json    {"items":[{id, seq?, name, color?}]}          -> Eric's Abercrombie items
+  data/watch-eric.json    {"items":[{store?, id, seq?, name, color?}]}  -> Eric's items (store defaults to abercrombie;
+                          uniqlo and ralphlauren-boys items carry a "store")
   data/watch-phoebe.json  {"items":[{store, id, seq?, name, color?}]}   -> Phoebe's stores
 For every watched item the newest day of its store is compared with the previous day.
 Events: price drop (and new low), price rise, back in the list, no longer listed, now 60%+ off.
@@ -22,7 +23,7 @@ exists = lambda p: os.path.exists(os.path.join(D, p))
 rd = lambda p: json.load(open(os.path.join(D, p)))
 COLS = ('id', 'seq', 'name', 'color', 'sale', 'orig')
 LABEL = {'abercrombie': 'Abercrombie', 'dolcevita': 'Dolce Vita', 'samedelman': 'Sam Edelman', 'zara': 'Zara',
-         'bershka': 'Bershka', 'jcrew': 'J.Crew', 'uniqlo': 'Uniqlo'}
+         'bershka': 'Bershka', 'jcrew': 'J.Crew', 'uniqlo': 'Uniqlo', 'ralphlauren-boys': 'Ralph Lauren Boys'}
 # person -> (watch file, folder holding that person's stores, default store)
 PEOPLE = [('Eric', 'watch-eric.json', lambda s: '' if s == 'abercrombie' else s, 'abercrombie'),
           ('Phoebe', 'watch-phoebe.json', lambda s: 'phoebe/' + s, None)]
@@ -101,7 +102,7 @@ for person, wfile, folder_of, default_store in PEOPLE:
         if msg:
             shown = max(shown or '', ds[-1]['date'])
             name = (w.get('name') or '') + (' (' + w['color'] + ')' if w.get('color') else '')
-            tag = f"[{LABEL.get(sid, sid)}] " if person == 'Phoebe' else ''
+            tag = f"[{LABEL.get(sid, sid)}] " if (person == 'Phoebe' or sid != 'abercrombie') else ''
             lines.append(f'- {tag}{name}: ' + '; '.join(msg))
     if lines:
         print(f'Watchlist — {person} ({shown}):')

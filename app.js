@@ -10,7 +10,8 @@ let store=STORES[0][0];try{const q=localStorage.getItem(STKEY);if(STORES.some(x=
 const ABE=()=>store==='abercrombie';
 const baseOf=sid=>SPACE!=='eric'?'data/'+SPACE+'/'+sid+'/':(sid==='abercrombie'?'data/':'data/'+sid+'/');
 const base=()=>baseOf(store);
-const TRACK=()=>SPACE!=='eric'||ABE();
+const TRACK=()=>true;
+const FLAT=()=>store==='uniqlo'; // Uniqlo has no original prices: a plain grid, no discount sections
 const sidOf=i=>(i&&i._s)||store;
 const isAbe=i=>sidOf(i)==='abercrombie';
 const storeName=sid=>(STORES.find(x=>x[0]===sid)||[0,sid])[1];
@@ -39,8 +40,8 @@ const photo=i=>i.photo?(isAbe(i)?imgUrl(i.photo):i.photo):(isAbe(i)&&!hasSeq(i)&
 const FKEY='sale-tracker-favs'+NS;
 let favs={};try{favs=JSON.parse(localStorage.getItem(FKEY)||'{}')||{}}catch(e){favs={}}
 const saveFavs=()=>{try{localStorage.setItem(FKEY,JSON.stringify(favs))}catch(e){}};
-const fk=i=>{const k=hasSeq(i)?i.id+'|'+i.seq:i.id+'|'+i.name;return SPACE==='eric'?k:sidOf(i)+'|'+k};
-const wkey=w=>fk({...w,_s:w.store});
+const fk=i=>{const k=hasSeq(i)?i.id+'|'+i.seq:i.id+'|'+i.name;return SPACE==='eric'&&isAbe(i)?k:sidOf(i)+'|'+k};
+const wkey=w=>fk({...w,_s:w.store||(SPACE==='eric'?'abercrombie':undefined)});
 const wmeta=w=>({id:w.id,seq:w.seq,name:w.name,color:w.color||'',photo:'',store:w.store||(SPACE==='eric'?'abercrombie':undefined)});
 // a browser that has never saved favorites starts from the repo watch list
 try{if(localStorage.getItem(FKEY)===null&&watch.items.length){for(const w of watch.items)favs[wkey(w)]=wmeta(w);saveFavs()}}catch(e){}
@@ -48,7 +49,7 @@ const TRK='<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 17 9 
 const star=i=>{if(!TRACK())return '';const k=fk(i),on=!!favs[k];return `<span class="fav" role="button" tabindex="0" aria-label="Track price" title="Track price" aria-pressed="${on}" data-k="${esc(k)}">${TRK}</span>`};
 const isNew=i=>Y&&!ym[tk(i)];
 function card(i,tags='',extra=''){const p=photo(i)||i._p;
-return `<a class="card" href="${url(i)}" target="_blank" rel="noopener"><div class="ph">${p?`<img loading="lazy" src="${p}" alt="" onerror="this.remove()">`:'<span class="nop">No photo</span>'}<span class="tag">${pt(i)}</span>${tags}${star(i)}</div><div class="info"><div class="nm">${esc(i.name)}</div><div class="cl">${esc(i.color||'')}</div><div class="pr">${priceH(i)}</div>${extra}</div></a>`}
+return `<a class="card" href="${url(i)}" target="_blank" rel="noopener"><div class="ph">${p?`<img loading="lazy" src="${p}" alt="" onerror="this.remove()">`:'<span class="nop">No photo</span>'}${pct(i)==null?'':`<span class="tag">${pt(i)}</span>`}${tags}${star(i)}</div><div class="info"><div class="nm">${esc(i.name)}</div><div class="cl">${esc(i.color||'')}</div><div class="pr">${priceH(i)}</div>${extra}</div></a>`}
 let vcat='all',vsort='off';
 const SKEY='sale-tracker-sections'+NS;
 let secOpen={};try{Object.assign(secOpen,JSON.parse(localStorage.getItem(SKEY)||'{}'))}catch(e){}
@@ -65,10 +66,10 @@ function view(D,P,which){
  const disc=ABE()?its.filter(i=>pct(i)>=40):its;
  const cn=c=>disc.filter(i=>catOf(i.name)===c).length;
  const cats=[...CATS.map(c=>c[0]),'Other'].filter(c=>cn(c)||newsAll.some(i=>catOf(i.name)===c));
- const vc=vcat==='all'||cats.includes(vcat)?vcat:'all',vs=vsort==='drop'&&!P?'off':vsort;
+ const vc=vcat==='all'||cats.includes(vcat)?vcat:'all',vs0=vsort==='drop'&&!P?'off':vsort,vs=FLAT()&&(vs0==='off'||vs0==='saved')?'price':vs0;
  const dropAmt=i=>dm[k(i)]?Math.max(0,dm[k(i)].sale-i.sale):0;
  const off=(a,b)=>pv(b)-pv(a)||a.sale-b.sale;
- const ord={off,price:(a,b)=>a.sale-b.sale||off(a,b),saved:(a,b)=>((b.orig||b.sale)-b.sale)-((a.orig||a.sale)-a.sale)||off(a,b),drop:(a,b)=>dropAmt(b)-dropAmt(a)||off(a,b)}[vs];
+ const ord={off,price:(a,b)=>a.sale-b.sale||off(a,b),pricehi:(a,b)=>b.sale-a.sale||off(a,b),saved:(a,b)=>((b.orig||b.sale)-b.sale)-((a.orig||a.sale)-a.sale)||off(a,b),drop:(a,b)=>dropAmt(b)-dropAmt(a)||off(a,b)}[vs];
  const sel=a=>vc==='all'||catOf(a.name)===vc;
  const news=newsAll.filter(sel).sort(ord);
  const bands=[['b60','60%+ off',i=>pct(i)>=60],['b50','50\u201360% off',i=>pct(i)>=50&&pct(i)<60],['b40','40\u201350% off',i=>pct(i)>=40&&pct(i)<50]].concat(ABE()?[]:[['lo','Under 40% off',i=>pct(i)!=null&&pct(i)<40],['na','Discount n/a (original price not shown)',i=>pct(i)==null]]).map(([id,t,f])=>{const all=its.filter(f);return{id,t,all,list:all.filter(sel).sort(ord)}});
@@ -84,13 +85,14 @@ function view(D,P,which){
  const rows=(a,f)=>a.length?`<ul class="rows">${a.map(f).join('')}</ul>`:none('None.');
  const st=(n,l)=>`<div class="st"><b>${n}</b><span>${l}</span></div>`;
  const chip=(c,t,n)=>`<button class="chip" data-c="${esc(c)}" aria-pressed="${c===vc}">${esc(t)}${n!=null?` <i>${n}</i>`:''}</button>`;
- let o=`<div class="stats">${st(hotAll.length,'at 60%+ off')}${st(hotAll.filter(i=>pct(i)>=70).length,'at 70%+')}${P?st(newsAll.length,'new')+st(drops.length,'price drops')+st(gone.length,'gone'):''}${st(its.length,'listings')}</div>`;
+ let o=`<div class="stats">${FLAT()?'':st(hotAll.length,'at 60%+ off')+st(hotAll.filter(i=>pct(i)>=70).length,'at 70%+')}${P?st(newsAll.length,'new')+st(drops.length,'price drops')+st(gone.length,'gone'):''}${st(its.length,'listings')}</div>`;
  o+=`<p class="promo">${esc(D.promo||'')}${D.readable===false?' <b>Page could not be read fully.</b>':''}${!P&&D===T&&!ABE()?' Comparison starts tomorrow.':''}${legacy?' Colorway comparison starts next day; today is compared to yesterday by product, name and original price.':''}</p>`;
- o+=`<div class="controls"><div class="chips" role="group" aria-label="Category">${chip('all','All')}${cats.map(c=>chip(c,c,cn(c))).join('')}</div><label class="sort"><span class="sub">Sort</span><select id="vs">${[['off','Biggest discount %'],['saved','Biggest $ saved'],['price','Lowest price']].concat(P?[['drop','Biggest drop since yesterday']]:[]).map(([v,t])=>`<option value="${v}"${v===vs?' selected':''}>${t}</option>`).join('')}</select></label></div>`;
- for(const b of bands)o+=sec(b.id,b.t,of(b.list.length,b.all.length),b.list.length?`<div class="grid">${b.list.map(i=>card(i,tagsFor(i))).join('')}</div>`:none(vc==='all'?'Nothing in this range.':'Nothing matches this filter.'));
+ o+=`<div class="controls"><div class="chips" role="group" aria-label="Category">${chip('all','All')}${cats.map(c=>chip(c,c,cn(c))).join('')}</div><label class="sort"><span class="sub">Sort</span><select id="vs">${(FLAT()?[['price','Lowest price'],['pricehi','Highest price']]:[['off','Biggest discount %'],['saved','Biggest $ saved'],['price','Lowest price']]).concat(P?[['drop','Biggest drop since yesterday']]:[]).map(([v,t])=>`<option value="${v}"${v===vs?' selected':''}>${t}</option>`).join('')}</select></label></div>`;
+ if(FLAT()){const fl=its.filter(sel).sort(ord);o+=fl.length?`<div class="grid">${fl.map(i=>card(i,tagsFor(i))).join('')}</div>`:none(its.length?'Nothing matches this filter.':'No items listed today.')}
+ else for(const b of bands)o+=sec(b.id,b.t,of(b.list.length,b.all.length),b.list.length?`<div class="grid">${b.list.map(i=>card(i,tagsFor(i))).join('')}</div>`:none(vc==='all'?'Nothing in this range.':'Nothing matches this filter.'));
  if(P){
  o+=sec('new','New',`${of(news.length,newsAll.length)} since ${esc(P.label||fmtD(P.date))}`,news.length?`<div class="grid">${news.map(i=>card(i)).join('')}</div>`:none('Nothing new.'));
- o+=sec('drops','Price drops',drops.length,rows(drops,i=>row(i,`<s>${$$(dm[k(i)].sale)}</s> \u2192 ${priceH({sale:i.sale,range:i.range})} <span class="sub">${pt(i)}</span>`)));
+ o+=sec('drops','Price drops',drops.length,rows(drops,i=>row(i,`<s>${$$(dm[k(i)].sale)}</s> \u2192 ${priceH({sale:i.sale,range:i.range})}${pct(i)==null?'':` <span class="sub">${pt(i)}</span>`}`)));
  o+=sec('gone','Gone',gone.length,rows(gone,i=>row(i,`was ${i.range?'from ':''}${$$(i.sale)}`)));}
  return o}
 const main=$('#view');let cur='t';
@@ -125,7 +127,7 @@ async function favView(){
   const last=pts[pts.length-1];if(!last)return `<div class="note">${esc(f.name)} ${esc(f.color||'')} \u2014 not seen in any day yet. ${star({...f,_s:sid})}</div>`;
   const prev=pts[pts.length-2],listed=last.d===lastD,v=pts.map(p=>p.i.sale);
   const chg=prev?(last.i.sale<prev.i.sale?`<span class="chg dn">\u2193 ${$$(prev.i.sale-last.i.sale)} since ${fmtD(prev.d.date)}</span>`:last.i.sale>prev.i.sale?`<span class="chg up">\u2191 ${$$(last.i.sale-prev.i.sale)} since ${fmtD(prev.d.date)}</span>`:`<span class="chg">no change since ${fmtD(prev.d.date)}</span>`):'<span class="chg">first day tracked</span>';
-  const extra=`<div class="hist">${SPACE==='eric'?'':`<div class="sub">${esc(storeName(sid))}</div>`}${spark(pts)}<div>${chg}</div><div class="sub">Low ${$$(Math.min(...v))} \u00b7 High ${$$(Math.max(...v))}</div>${listed?'':`<div class="sub"><b>Not listed ${esc(fmtD(lastD.date))}</b> \u2014 last seen ${esc(fmtD(last.d.date))}</div>`}<span class="pill${wset.has(k)?' on':''}">${wset.has(k)?'Alerts on':'No alerts'}</span><details><summary>Price history (${pts.length} day${pts.length>1?'s':''})</summary><div class="sub">${pts.map(p=>`<span class="nw">${fmtD(p.d.date)} ${$$(p.i.sale)}</span>`).join(' \u00b7 ')}</div></details></div>`;
+  const extra=`<div class="hist"><div class="sub">${esc(storeName(sid))}</div>${spark(pts)}<div>${chg}</div><div class="sub">Low ${$$(Math.min(...v))} \u00b7 High ${$$(Math.max(...v))}</div>${listed?'':`<div class="sub"><b>Not listed ${esc(fmtD(lastD.date))}</b> \u2014 last seen ${esc(fmtD(last.d.date))}</div>`}<span class="pill${wset.has(k)?' on':''}">${wset.has(k)?'Alerts on':'No alerts'}</span><details><summary>Price history (${pts.length} day${pts.length>1?'s':''})</summary><div class="sub">${pts.map(p=>`<span class="nw">${fmtD(p.d.date)} ${$$(p.i.sale)}</span>`).join(' \u00b7 ')}</div></details></div>`;
   return card({...last.i,_p:f.photo,_s:sid},'',extra)}).join('');
  $('#view').innerHTML=panel+`<h2>Tracking <span class="ct">${keys.length} item${keys.length===1?'':'s'} \u00b7 saved in this browser</span></h2><div class="grid favgrid">${cards}</div>`}
 function favCount(){const b=document.querySelector('.tabs button[data-k="f"]');if(b){const n=Object.keys(favs).length;b.innerHTML='Tracking'+(n?' <span class="bd">'+n+'</span>':'')}}
@@ -134,7 +136,7 @@ function toggleFav(k){if(favs[k])delete favs[k];else{const i=byKey[k]||{};favs[k
 document.addEventListener('click',e=>{const f=e.target.closest&&e.target.closest('.fav');if(!f)return;e.preventDefault();e.stopPropagation();toggleFav(f.dataset.k)});
 document.addEventListener('change',e=>{const t=e.target;if(t.id==='vs'){vsort=t.value;render();const n=$('#vs');if(n)n.focus()}});
 document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('.chip');if(c){vcat=c.dataset.c;render();const n=document.querySelector('.chip[aria-pressed="true"]');if(n)n.focus()}});
-document.addEventListener('click',e=>{const t=e.target;if(t.id==='fcopy'){const txt=JSON.stringify({items:Object.values(favs).map(f=>{const o={};if(SPACE!=='eric')o.store=f.store;o.id=f.id;if(f.seq)o.seq=f.seq;o.name=f.name;if(f.color)o.color=f.color;return o})},null,2)+'\n';
+document.addEventListener('click',e=>{const t=e.target;if(t.id==='fcopy'){const txt=JSON.stringify({items:Object.values(favs).map(f=>{const o={};if(SPACE!=='eric'||(f.store&&f.store!=='abercrombie'))o.store=f.store;o.id=f.id;if(f.seq)o.seq=f.seq;o.name=f.name;if(f.color)o.color=f.color;return o})},null,2)+'\n';
   const done=()=>{t.textContent='Copied!';setTimeout(()=>{t.textContent='Copy tracked items as watch list'},1500)};
   (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(done,()=>{window.prompt('Copy this watch list JSON:',txt)})}
  else if(t.id==='fimp'){for(const w of watch.items)if(!favs[wkey(w)])favs[wkey(w)]=wmeta(w);saveFavs();favCount();favView()}});

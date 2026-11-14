@@ -2,14 +2,14 @@
 const $=s=>document.querySelector(s);
 const ROOT=window.SALE_ROOT||'',SPACE=window.SALE_SPACE||'eric',NS=SPACE==='eric'?'':'-'+SPACE;
 const get=async u=>window.__DATA__?window.__DATA__[u]:(await fetch(ROOT+u)).json();
-const SPACES={eric:[['abercrombie','Abercrombie',"men's XS clearance"],['uniqlo','Uniqlo',"men's sale"],['ralphlauren-boys','Ralph Lauren Boys',"big boy sale"]],phoebe:[]};
+const SPACES={eric:[['abercrombie','Abercrombie',"men's XS clearance"],['uniqlo','Uniqlo',"men's sale"],['ralphlauren-boys','Ralph Lauren Boys',"big boy sale"]],phoebe:[['dolcevita','Dolce Vita',"women's sale"],['samedelman','Sam Edelman',"women's sale"],['zara','Zara',"women's special prices"],['bershka','Bershka',"women's promo"],['jcrew','J.Crew',"women's sale"],['uniqlo','Uniqlo',"women's sale"]]};
 const STORES=SPACES[SPACE]||[];
 if(!STORES.length)return;
 const STKEY='sale-tracker-store'+NS;
-let store='abercrombie';try{const q=localStorage.getItem(STKEY);if(STORES.some(x=>x[0]===q))store=q}catch(e){}
+let store=STORES[0][0];try{const q=localStorage.getItem(STKEY);if(STORES.some(x=>x[0]===q))store=q}catch(e){}
 const ABE=()=>store==='abercrombie';
-const base=()=>ABE()?'data/':'data/'+store+'/';
-const ORIGIN={uniqlo:'https://www.uniqlo.com','ralphlauren-boys':'https://www.ralphlauren.com'};
+const base=()=>SPACE!=='eric'?'data/'+SPACE+'/'+store+'/':(ABE()?'data/':'data/'+store+'/');
+const ORIGIN={uniqlo:'https://www.uniqlo.com','ralphlauren-boys':'https://www.ralphlauren.com',dolcevita:'https://www.dolcevita.com',samedelman:'https://www.samedelman.com',zara:'https://www.zara.com',bershka:'https://www.bershka.com',jcrew:'https://www.jcrew.com'};
 let idx={days:[]},Y=null,T=null,tk,ym,byKey={};
 const photos=await get('data/photos.json').catch(()=>({}));
 const watch=(await get('data/watch.json').catch(()=>null))||{items:[]};
@@ -46,7 +46,9 @@ let vcat='all',vsort='off';
 const SKEY='sale-tracker-sections'+NS;
 let secOpen={b50:false,b40:false,lo:false};try{Object.assign(secOpen,JSON.parse(localStorage.getItem(SKEY)||'{}'))}catch(e){}
 document.addEventListener('toggle',e=>{const d=e.target;if(d&&d.dataset&&d.dataset.s){secOpen[d.dataset.s]=d.open;try{localStorage.setItem(SKEY,JSON.stringify(secOpen))}catch(x){}}},true);
-const CATS=[['Swim',/swim|trunk/],['Outerwear',/jacket|coat|puffer|bomber|parka|vest|windbreaker|shacket|blazer|anorak/],['Sweaters',/sweater|cardigan|knit/],['Hoodies',/hoodie|afterhood|sweatshirt|fleece|zip/],['Underwear',/boxer|brief|underwear|socks?\b/],['Tees & tanks',/\btees?\b|t-shirt|tank|muscle|henley|jersey/],['Shirts & polos',/polo|shirt|flannel|oxford|button|popover/],['Bottoms',/\bpants?\b|\bshorts?\b(?![- ]sleeve)|jogger|jean|sweatpant|chino|trouser|cargo|denim|legging/]];
+const CATS_E=[['Swim',/swim|trunk/],['Outerwear',/jacket|coat|puffer|bomber|parka|vest|windbreaker|shacket|blazer|anorak/],['Sweaters',/sweater|cardigan|knit/],['Hoodies',/hoodie|afterhood|sweatshirt|fleece|zip/],['Underwear',/boxer|brief|underwear|socks?\b/],['Tees & tanks',/\btees?\b|t-shirt|tank|muscle|henley|jersey/],['Shirts & polos',/polo|shirt|flannel|oxford|button|popover/],['Bottoms',/\bpants?\b|\bshorts?\b(?![- ]sleeve)|jogger|jean|sweatpant|chino|trouser|cargo|denim|legging/]];
+const CATS_W=[['Swim',/bikini|swim|one-piece|one-p\b|bathing|\bbottoms? only/],['Shoes',/\bshoes?\b|\bheels?\b|\bboots?\b|booties|bootie|\bflats?\b|sandal|sneaker|loafer|\bmules?\b|\bpumps?\b|\bclogs?\b|wedge|slipper|\bslides?\b|mary jane|ballet|platform|espadrille|trainer/],['Dresses & skirts',/dress|skirt|jumpsuit|romper|gown|\bskort|\bmidi|\bmaxi|\bmini\b/],['Outerwear',/jacket|coat|puffer|parka|blazer|\bvest\b|trench|\bcape\b|anorak|poncho|shacket|bomber|blouson/],['Hoodies',/hoodie|sweatsh|fleece|half-zip|quarter-zip|full-zip|\bterry\b/],['Sweaters',/sweater|sweatr|cardigan|\bknit|pullover|jumper|rollneck|crewn|v-nec|cashmere|turtle|mockneck|boatneck/],['Tops',/\btops?\b|\btees?\b|t-sh|t-shirt|\btank|blouse|shirt|bodysuit|\bcami\b|\bpolo\b|henley|tunic|button-up|button-down|\bjersey\b|rugby|\bcrop|long-sleev|short-sleev|sleeveless|dolman|three-quar|\bpolo/],['Bottoms',/\bpants?\b|\bshorts?\b(?![- ]sleeve)|jean|legging|jogger|sweatpant|trouser|culotte|chino|denim|cargo|\bjort|wide-leg|slim-wide|straight-leg|slim-straight|\bankl|flare|pintuck|full-length|\bcapri/],['Accessories',/\bbags?\b|\bbelt|scarf|\bhats?\b|glove|\bsocks?\b|jewel|necklace|earring|bracelet|\btote\b|purse|wallet|beanie|sunglass|\bwatch\b|minaudi|\bbra\b|pajama/]];
+const CATS=SPACE==='eric'?CATS_E:CATS_W;
 const catOf=n=>{const t=String(n).toLowerCase();for(const [c,r] of CATS)if(r.test(t))return c;return 'Other'};
 function view(D,P,which){
  if(!D.items.length)return `<p class="promo">${esc(D.promo||'')}</p><div class="empty big"><b>No items listed today</b></div>`;
@@ -78,7 +80,7 @@ function view(D,P,which){
  o+=`<div class="controls"><div class="chips" role="group" aria-label="Category">${chip('all','All')}${cats.map(c=>chip(c,c,cn(c))).join('')}</div><label class="sort"><span class="sub">Sort</span><select id="vs">${[['off','Biggest discount %'],['saved','Biggest $ saved'],['price','Lowest price']].concat(P?[['drop','Biggest drop since yesterday']]:[]).map(([v,t])=>`<option value="${v}"${v===vs?' selected':''}>${t}</option>`).join('')}</select></label></div>`;
  for(const b of bands)o+=sec(b.id,b.t,of(b.list.length,b.all.length),b.list.length?`<div class="grid">${b.list.map(i=>card(i,tagsFor(i))).join('')}</div>`:none(vc==='all'?'Nothing in this range.':'Nothing matches this filter.'));
  if(P){
- o+=sec('new','New',`${of(news.length,newsAll.length)} since ${esc(P.label)}`,news.length?`<div class="grid">${news.map(i=>card(i)).join('')}</div>`:none('Nothing new.'));
+ o+=sec('new','New',`${of(news.length,newsAll.length)} since ${esc(P.label||fmtD(P.date))}`,news.length?`<div class="grid">${news.map(i=>card(i)).join('')}</div>`:none('Nothing new.'));
  o+=sec('drops','Price drops',drops.length,rows(drops,i=>row(i,`<s>${$$(dm[k(i)].sale)}</s> \u2192 ${priceH({sale:i.sale,range:i.range})} <span class="sub">${pt(i)}</span>`)));
  o+=sec('gone','Gone',gone.length,rows(gone,i=>row(i,`was ${i.range?'from ':''}${$$(i.sale)}`)));}
  return o}
@@ -149,6 +151,7 @@ function older(){$('#older').innerHTML=idx.days.slice(0,-2).reverse().map(d=>`<l
 async function setStore(n){store=n;try{localStorage.setItem(STKEY,n)}catch(e){}
  idx=(await get(base()+'index.json').catch(()=>null))||{days:[]};if(!idx.days)idx.days=[];
  const ds=[];for(const x of idx.days.slice(-2)){const d=await get(base()+x+'.json').catch(()=>null);if(d&&d.items)ds.push(d)}
+ if(SPACE!=='eric')for(const d of ds)for(const i of d.items)if(/^[A-Z]{2}\d{4}$/.test(i.color||''))i.color=''; // J.Crew feed gives a color code, not a name
  [Y,T]=ds.length==2?ds:[null,ds[0]||null];
  tk=keyFor(legacyCmp(T,Y));ym=minBy(Y,tk);
  byKey={};for(const d of [Y,T])if(d)for(const i of d.items)byKey[fk(i)]=i;

@@ -20,9 +20,16 @@
 <body>
 <header class="top"><div class="bar">
 <div class="lead"><div class="brand"><span class="logo" aria-hidden="true">%</span><h1 id="ttl">Sale Tracker</h1></div><nav class="spaces" aria-label="Section"><a href="../eric/">Eric</a><a href="../phoebe/" aria-current="page">Phoebe</a></nav></div>
+<nav class="tabs" aria-label="Views"><button data-k="t" aria-pressed="true">Today</button><button data-k="y">Yesterday</button><button data-k="f">Favorites</button></nav>
 </div></header>
 <main>
-<div id="view"><div class="empty big"><b>Nothing here yet</b><span>Phoebe's section is empty for now.</span></div></div>
+<div class="chips stores" id="stores" role="group" aria-label="Store"></div>
+<p class="intro">Abercrombie men's XS clearance<span id="upd"></span></p>
+<div id="view" aria-live="polite"><div class="grid" aria-hidden="true"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
+<details class="more"><summary>Full table and older days</summary>
+<div class="tools"><input id="q" type="search" placeholder="Search name, color, id" aria-label="Search"><select id="f" aria-label="Filter"><option value="all">All</option><option value="60">60%+ off</option><option value="new">New today</option></select><span id="cnt" class="sub"></span></div>
+<div class="tw"><table><thead><tr><th data-k="name">Item</th><th data-k="color">Color</th><th data-k="sale">Sale</th><th data-k="orig">Orig</th><th data-k="pct">Off</th></tr></thead><tbody id="tb"></tbody></table></div>
+<h2>Older days</h2><ul class="l" id="older"></ul></details>
 </main>
 <script>window.SALE_SPACE="phoebe";window.SALE_ROOT="../";</script>
 <script src="../app.js"></script>

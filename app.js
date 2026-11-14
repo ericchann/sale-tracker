@@ -58,8 +58,17 @@ const CATS_E=[['Swim',/swim|trunk/],['Outerwear',/jacket|coat|puffer|bomber|park
 const CATS_W=[['Swim',/bikini|swim|one-piece|one-p\b|bathing|\bbottoms? only/],['Shoes',/\bshoes?\b|\bheels?\b|\bboots?\b|booties|bootie|\bflats?\b|sandal|sneaker|loafer|\bmules?\b|\bpumps?\b|\bclogs?\b|wedge|slipper|\bslides?\b|mary jane|ballet|platform|espadrille|trainer/],['Dresses & skirts',/dress|skirt|jumpsuit|romper|gown|\bskort|\bmidi|\bmaxi|\bmini\b/],['Outerwear',/jacket|coat|puffer|parka|blazer|\bvest\b|trench|\bcape\b|anorak|poncho|shacket|bomber|blouson/],['Hoodies',/hoodie|sweatsh|fleece|half-zip|quarter-zip|full-zip|\bterry\b/],['Sweaters',/sweater|sweatr|cardigan|\bknit|pullover|jumper|rollneck|crewn|v-nec|cashmere|turtle|mockneck|boatneck/],['Tops',/\btops?\b|\btees?\b|t-sh|t-shirt|\btank|blouse|shirt|bodysuit|\bcami\b|\bpolo\b|henley|tunic|button-up|button-down|\bjersey\b|rugby|\bcrop|long-sleev|short-sleev|sleeveless|dolman|three-quar|\bpolo/],['Bottoms',/\bpants?\b|\bshorts?\b(?![- ]sleeve)|jean|legging|jogger|sweatpant|trouser|culotte|chino|denim|cargo|\bjort|wide-leg|slim-wide|straight-leg|slim-straight|\bankl|flare|pintuck|full-length|\bcapri/],['Accessories',/\bbags?\b|\bbelt|scarf|\bhats?\b|glove|\bsocks?\b|jewel|necklace|earring|bracelet|\btote\b|purse|wallet|beanie|sunglass|\bwatch\b|minaudi|\bbra\b|pajama/]];
 const CATS=SPACE==='eric'?CATS_E:CATS_W;
 const catOf=n=>{const t=String(n).toLowerCase();for(const [c,r] of CATS)if(r.test(t))return c;return 'Other'};
+// is there a sitewide sale? inferred from the store's promo banner text
+const saleState=t=>{if(!t)return{k:'unk',big:'Sitewide sale: unknown'};
+ const x=t.toLowerCase();
+ if(/\bno (site-?wide )?(sale|promo)/.test(x))return{k:'no',big:'No sitewide sale'};
+ const body=x.split(/[.|;]/).filter(p=>!/sign ?up|e-?mail|newsletter|\bapp\b|first order|subscribe|text /.test(p)).join(' ');
+ if(/\d+\s?% off|site-?wide|extra \d+%|up to \d+%|\bbogo\b|buy \d+,? get/.test(body))return{k:'yes',big:'Sitewide sale'};
+ return{k:'none',big:'No sitewide sale detected'}};
+const heroHTML=(D,notes)=>{const t=String(D.promo||'').trim(),has=t&&!/^not captured$/i.test(t),s=saleState(has?t:'');
+ return `<section class="hero ${s.k}"><div class="big">${s.big}</div><p class="pt">${has?esc(t):'Promo banner not captured.'}</p>${notes?`<p class="sub">${notes}</p>`:''}</section>`};
 function view(D,P,which){
- if(!D.items.length)return `<p class="promo">${esc(D.promo||'')}</p><div class="empty big"><b>No items listed today</b></div>`;
+ if(!D.items.length)return heroHTML(D,'')+`<div class="empty big"><b>No items listed today</b></div>`;
  const its=D.items,hotAll=its.filter(i=>pct(i)>=60);
  const legacy=legacyCmp(D,P),k=keyFor(legacy),dm=minBy(P,k),cm=minBy(D,k);
  const newsAll=Object.values(cm).filter(i=>P&&!dm[k(i)]);
@@ -85,8 +94,8 @@ function view(D,P,which){
  const rows=(a,f)=>a.length?`<ul class="rows">${a.map(f).join('')}</ul>`:none('None.');
  const st=(n,l)=>`<div class="st"><b>${n}</b><span>${l}</span></div>`;
  const chip=(c,t,n)=>`<button class="chip" data-c="${esc(c)}" aria-pressed="${c===vc}">${esc(t)}${n!=null?` <i>${n}</i>`:''}</button>`;
- let o=`<div class="stats">${FLAT()?'':st(hotAll.length,'at 60%+ off')+st(hotAll.filter(i=>pct(i)>=70).length,'at 70%+')}${P?st(newsAll.length,'new')+st(drops.length,'price drops')+st(gone.length,'gone'):''}${st(its.length,'listings')}</div>`;
- o+=`<p class="promo">${esc(D.promo||'')}${D.readable===false?' <b>Page could not be read fully.</b>':''}${!P&&D===T&&!ABE()?' Comparison starts tomorrow.':''}${legacy?' Colorway comparison starts next day; today is compared to yesterday by product, name and original price.':''}</p>`;
+ const notes=[D.readable===false?'<b>Page could not be read fully.</b>':'',!P&&D===T&&!ABE()?'Comparison starts tomorrow.':'',legacy?'Colorway comparison starts next day; today is compared to yesterday by product, name and original price.':''].filter(Boolean).join(' ');
+ let o=`<div class="summary">${heroHTML(D,notes)}${P?st(newsAll.length,'new items'):''}</div>`;
  o+=`<div class="controls"><div class="chips" role="group" aria-label="Category">${chip('all','All')}${cats.map(c=>chip(c,c,cn(c))).join('')}</div><label class="sort"><span class="sub">Sort</span><select id="vs">${(FLAT()?[['price','Lowest price'],['pricehi','Highest price']]:[['off','Biggest discount %'],['saved','Biggest $ saved'],['price','Lowest price']]).concat(P?[['drop','Biggest drop since yesterday']]:[]).map(([v,t])=>`<option value="${v}"${v===vs?' selected':''}>${t}</option>`).join('')}</select></label></div>`;
  if(FLAT()){const fl=its.filter(sel).sort(ord);o+=fl.length?`<div class="grid">${fl.map(i=>card(i,tagsFor(i))).join('')}</div>`:none(its.length?'Nothing matches this filter.':'No items listed today.')}
  else for(const b of bands)o+=sec(b.id,b.t,of(b.list.length,b.all.length),b.list.length?`<div class="grid">${b.list.map(i=>card(i,tagsFor(i))).join('')}</div>`:none(vc==='all'?'Nothing in this range.':'Nothing matches this filter.'));
@@ -115,11 +124,9 @@ const spark=pts=>{if(pts.length<2)return '';const v=pts.map(p=>p.i.sale),lo=Math
  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts.map((p,n)=>x(n).toFixed(1)+','+y(p.i.sale).toFixed(1)).join(' ')}"/></svg>`};
 async function favView(){
  const sidF=f=>f.store||'abercrombie',order=sid=>{const n=STORES.findIndex(x=>x[0]===sid);return n<0?99:n};
- const keys=Object.keys(favs).sort((a,b)=>order(sidF(favs[a]))-order(sidF(favs[b]))),wset=new Set(watch.items.map(wkey));
- const who=SPACE==='eric'?"Eric's":"Phoebe's",wf='watch-'+SPACE+'.json';
- const panel=`<details class="sync"><summary>Sync and alerts</summary><div class="syncb"><p class="sub">${watch.items.length} item${watch.items.length===1?'':'s'} in ${who} watch list (data/${wf}). The daily run sends alerts for these, and any device can import them. To update it: copy, paste over the file on GitHub, then commit.</p><div class="btns"><button id="fcopy">Copy tracked items as watch list</button><a href="https://github.com/ericchann/sale-tracker/edit/main/data/${wf}" target="_blank" rel="noopener">Edit on GitHub</a><button id="fimp">Import watch list</button></div></div></details>`;
- if(!keys.length){$('#view').innerHTML=panel+'<div class="empty big"><b>Nothing tracked yet</b><span>Tap the graph icon on any item to follow its price over time.</span></div>';return}
- $('#view').innerHTML=panel+'<div class="empty">Loading history\u2026</div>';
+ const keys=Object.keys(favs).sort((a,b)=>order(sidF(favs[a]))-order(sidF(favs[b])));
+ if(!keys.length){$('#view').innerHTML='<div class="empty big"><b>Nothing tracked yet</b><span>Tap the graph icon on any item to follow its price over time.</span></div>';return}
+ $('#view').innerHTML='<div class="empty">Loading history\u2026</div>';
  const sids=[...new Set(keys.map(k=>sidF(favs[k])))],Ds={};
  await Promise.all(sids.map(async sid=>{Ds[sid]=await loadAllFor(sid)}));if(cur!=='f')return;
  const cards=keys.map(k=>{const f=favs[k],sid=sidF(f),D=Ds[sid],pts=[];for(const d of D){const m=matchDay(f,d);if(m)pts.push({d,i:m})}
@@ -127,31 +134,28 @@ async function favView(){
   const last=pts[pts.length-1];if(!last)return `<div class="note">${esc(f.name)} ${esc(f.color||'')} \u2014 not seen in any day yet. ${star({...f,_s:sid})}</div>`;
   const prev=pts[pts.length-2],listed=last.d===lastD,v=pts.map(p=>p.i.sale);
   const chg=prev?(last.i.sale<prev.i.sale?`<span class="chg dn">\u2193 ${$$(prev.i.sale-last.i.sale)} since ${fmtD(prev.d.date)}</span>`:last.i.sale>prev.i.sale?`<span class="chg up">\u2191 ${$$(last.i.sale-prev.i.sale)} since ${fmtD(prev.d.date)}</span>`:`<span class="chg">no change since ${fmtD(prev.d.date)}</span>`):'<span class="chg">first day tracked</span>';
-  const extra=`<div class="hist"><div class="sub">${esc(storeName(sid))}</div>${spark(pts)}<div>${chg}</div><div class="sub">Low ${$$(Math.min(...v))} \u00b7 High ${$$(Math.max(...v))}</div>${listed?'':`<div class="sub"><b>Not listed ${esc(fmtD(lastD.date))}</b> \u2014 last seen ${esc(fmtD(last.d.date))}</div>`}<span class="pill${wset.has(k)?' on':''}">${wset.has(k)?'Alerts on':'No alerts'}</span><details><summary>Price history (${pts.length} day${pts.length>1?'s':''})</summary><div class="sub">${pts.map(p=>`<span class="nw">${fmtD(p.d.date)} ${$$(p.i.sale)}</span>`).join(' \u00b7 ')}</div></details></div>`;
+  const extra=`<div class="hist"><div class="sub">${esc(storeName(sid))}</div>${spark(pts)}<div>${chg}</div><div class="sub">Low ${$$(Math.min(...v))} \u00b7 High ${$$(Math.max(...v))}</div>${listed?'':`<div class="sub"><b>Not listed ${esc(fmtD(lastD.date))}</b> \u2014 last seen ${esc(fmtD(last.d.date))}</div>`}<details><summary>Price history (${pts.length} day${pts.length>1?'s':''})</summary><div class="sub">${pts.map(p=>`<span class="nw">${fmtD(p.d.date)} ${$$(p.i.sale)}</span>`).join(' \u00b7 ')}</div></details></div>`;
   return card({...last.i,_p:f.photo,_s:sid},'',extra)}).join('');
- $('#view').innerHTML=panel+`<h2>Tracking <span class="ct">${keys.length} item${keys.length===1?'':'s'} \u00b7 saved in this browser</span></h2><div class="grid favgrid">${cards}</div>`}
+ $('#view').innerHTML=`<h2>Tracking <span class="ct">${keys.length} item${keys.length===1?'':'s'} \u00b7 saved in this browser</span></h2><div class="grid favgrid">${cards}</div>`}
 function favCount(){const b=document.querySelector('.tabs button[data-k="f"]');if(b){const n=Object.keys(favs).length;b.innerHTML='Tracking'+(n?' <span class="bd">'+n+'</span>':'')}}
 function toggleFav(k){if(favs[k])delete favs[k];else{const i=byKey[k]||{};favs[k]={id:i.id,seq:i.seq,name:i.name,color:i.color||'',photo:photo(i)||'',store:sidOf(i)};if(!favs[k].id){const p=k.split('|');favs[k].id=p[0]}}
  saveFavs();document.querySelectorAll('.fav').forEach(e=>{if(e.dataset.k===k){const on=!!favs[k];e.setAttribute('aria-pressed',on)}});favCount();if(cur==='f')favView()}
 document.addEventListener('click',e=>{const f=e.target.closest&&e.target.closest('.fav');if(!f)return;e.preventDefault();e.stopPropagation();toggleFav(f.dataset.k)});
 document.addEventListener('change',e=>{const t=e.target;if(t.id==='vs'){vsort=t.value;render();const n=$('#vs');if(n)n.focus()}});
 document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('.chip');if(c){vcat=c.dataset.c;render();const n=document.querySelector('.chip[aria-pressed="true"]');if(n)n.focus()}});
-document.addEventListener('click',e=>{const t=e.target;if(t.id==='fcopy'){const txt=JSON.stringify({items:Object.values(favs).map(f=>{const o={};if(SPACE!=='eric'||(f.store&&f.store!=='abercrombie'))o.store=f.store;o.id=f.id;if(f.seq)o.seq=f.seq;o.name=f.name;if(f.color)o.color=f.color;return o})},null,2)+'\n';
-  const done=()=>{t.textContent='Copied!';setTimeout(()=>{t.textContent='Copy tracked items as watch list'},1500)};
-  (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(done,()=>{window.prompt('Copy this watch list JSON:',txt)})}
- else if(t.id==='fimp'){for(const w of watch.items)if(!favs[wkey(w)])favs[wkey(w)]=wmeta(w);saveFavs();favCount();favView()}});
 document.addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const f=e.target.closest&&e.target.closest('.fav');if(!f)return;e.preventDefault();toggleFav(f.dataset.k)});
 function render(){document.body.classList.toggle('trk',cur==='f'&&TRACK());
  if(cur==='f'&&TRACK())favView();else if(!T)$('#view').innerHTML='<div class="empty big"><b>No data yet</b></div>';else $('#view').innerHTML=view(T,Y);favCount();
  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===cur))}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{cur=b.dataset.k;render()});
 
-function upd(){const u=$('#upd');if(!T){if(u)u.innerHTML='';return}
+function upd(){const u=$('#upd'),sb=$('#stale');if(!T){if(u)u.innerHTML='';if(sb)sb.hidden=true;return}
  const f=(o)=>new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',...o}),now=new Date();
  const ny=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'}).format(now),hr=+f({hour:'numeric',hour12:false}).format(now)%24;
  const age=Math.round((Date.parse(ny+'T00:00:00Z')-Date.parse(T.date+'T00:00:00Z'))/864e5);
  const warn=age>=2||(age===1&&hr>=18);
- if(u)u.innerHTML=`Last update: ${esc(T.label||fmtD(T.date))}`+(warn?` <b class="warn">No update for ${age} days \u2014 the daily run may have failed.</b>`:'')}
+ if(u)u.innerHTML=`Last update: ${esc(T.label||fmtD(T.date))}`;
+ if(sb){sb.hidden=!warn;sb.textContent=warn?`No update for ${age} days \u2014 the daily run may have failed.`:''}}
 
 // More: full table
 let sortK='pct',asc=false,q='',flt='all';

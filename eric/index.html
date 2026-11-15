@@ -18,23 +18,29 @@
 <link rel="stylesheet" href="../styles.css">
 </head>
 <body class="p-eric">
+<a class="skip" href="#main">Skip to products</a>
 <div class="shell">
-<aside class="rail" aria-label="Menu">
+<aside class="rail" id="rail" aria-label="Menu">
 <a class="who" href="../phoebe/" aria-label="Switch to Phoebe"><span class="ava"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span><span class="wn"><b>Eric</b><i>tap to switch</i></span></a>
-<nav class="rblock" id="storebox" aria-label="Stores"><h3>Stores</h3><div class="stores" id="stores"></div></nav>
+<nav class="rblock" id="storebox" aria-labelledby="rh-stores"><p class="rh" id="rh-stores">Stores</p><div class="stores" id="stores"></div></nav>
+<button type="button" class="ftoggle" id="ftoggle" aria-expanded="false" aria-controls="fbody">Filters <span id="fcount" class="fc" hidden></span></button>
+<div class="fbody" id="fbody">
+<div class="rblock" id="searchbox"><label class="rh" for="vsearch">Search</label><input id="vsearch" type="search" placeholder="Name or color" autocomplete="off"></div>
 <div class="rblock" id="sortbox"></div>
-<div class="rblock" id="sizebox"><h3>Boxes per row <span id="colsv" class="cv"></span></h3><input id="cols" type="range" min="2" max="8" step="1" value="4" aria-label="Boxes per row"></div>
+<div class="rblock" id="sizebox"><p class="rh" id="rh-size">Boxes per row <span id="colsv" class="cv"></span></p><input id="cols" type="range" min="2" max="8" step="1" value="4" aria-labelledby="rh-size"><button type="button" id="colsauto" class="linkbtn" hidden>Reset to auto</button></div>
 <div class="rblock" id="catbox"></div>
+</div>
 </aside>
 <div class="content">
 <div class="topbar"><div id="sale"></div><nav class="tabs" aria-label="Views"><button data-k="t" aria-pressed="true">Today</button><button data-k="f">Tracking</button></nav></div>
 <div id="stale" class="stale" hidden></div>
 <h1 id="sname" class="sname">&nbsp;</h1>
-<main>
-<div id="view" aria-live="polite"><div class="grid" aria-hidden="true"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
+<main id="main" tabindex="-1">
+<p id="status" class="sr" role="status" aria-live="polite"></p>
+<div id="view"><div class="grid" aria-hidden="true"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
 <details class="more"><summary>Full table and older days</summary>
-<div class="tools"><input id="q" type="search" placeholder="Search name, color, id" aria-label="Search"><select id="f" aria-label="Filter"><option value="all">All</option><option value="60">60%+ off</option><option value="new">New today</option></select><span id="cnt" class="sub"></span></div>
-<div class="tw"><table><thead><tr><th data-k="name">Item</th><th data-k="color">Color</th><th data-k="sale">Sale</th><th data-k="orig">Orig</th><th data-k="pct">Off</th></tr></thead><tbody id="tb"></tbody></table></div>
+<div class="tools"><input id="q" type="search" placeholder="Search name, color, id" aria-label="Search the table"><select id="f" aria-label="Filter the table"><option value="all">All</option><option value="60">60%+ off</option><option value="new">New today</option></select><span id="cnt" class="sub"></span></div>
+<div class="tw"><table><thead><tr><th data-k="name" aria-sort="none"><button type="button">Item</button></th><th data-k="color" aria-sort="none"><button type="button">Color</button></th><th data-k="sale" aria-sort="none"><button type="button">Sale</button></th><th data-k="orig" aria-sort="none"><button type="button">Orig</button></th><th data-k="pct" aria-sort="none"><button type="button">Off</button></th></tr></thead><tbody id="tb"></tbody></table></div>
 <h2>Older days</h2><ul class="l" id="older"></ul></details>
 </main>
 <footer class="foot"><p class="intro">Abercrombie men's XS clearance<span id="upd"></span></p></footer>

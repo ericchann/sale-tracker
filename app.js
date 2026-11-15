@@ -17,6 +17,18 @@ const isAbe=i=>sidOf(i)==='abercrombie';
 const storeName=sid=>(STORES.find(x=>x[0]===sid)||[0,sid])[1];
 const ORIGIN={uniqlo:'https://www.uniqlo.com','ralphlauren-boys':'https://www.ralphlauren.com',dolcevita:'https://www.dolcevita.com',samedelman:'https://www.samedelman.com',zara:'https://www.zara.com',bershka:'https://www.bershka.com',jcrew:'https://www.jcrew.com'};
 let idx={days:[]},Y=null,T=null,tk,ym,byKey={};
+// boxes per row: a slider in the left column. Without a saved choice it follows the screen width; the phone and the computer keep their own saved value
+{const mq=window.matchMedia?matchMedia('(max-width:900px)'):{matches:false},KEY='sale-tracker-cols'+NS,sl=$('#cols'),lab=$('#colsv'),rst=$('#colsauto');
+ let saved={};try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){}
+ const auto=()=>{if(mq.matches)return 2;const c=document.querySelector('.content'),w=(c?c.clientWidth:1000)-88;return Math.max(2,Math.min(8,Math.floor(w/220)))};
+ const apply=()=>{const m=mq.matches,min=m?1:2,max=m?4:8,sv=+saved[m?'m':'d'],v=sv?Math.max(min,Math.min(max,sv)):auto();
+  if(sl){sl.min=min;sl.max=max;sl.value=v}if(lab)lab.textContent=v;if(rst)rst.hidden=!sv;
+  document.documentElement.style.setProperty('--cols',v);document.body.classList.toggle('dense',v>=(m?3:6))};
+ const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(e){}};
+ if(sl)sl.oninput=()=>{saved[mq.matches?'m':'d']=+sl.value;persist();apply()};
+ if(rst)rst.onclick=()=>{delete saved[mq.matches?'m':'d'];persist();apply()};
+ if(mq.addEventListener)mq.addEventListener('change',apply);
+ let raf=0;window.addEventListener('resize',()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(apply)});apply()}
 const photos=await get('data/photos.json').catch(()=>({}));
 const watch=(await get('data/watch-'+SPACE+'.json').catch(()=>null))||{items:[]};
 const slug=n=>n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
@@ -31,7 +43,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const dayHasSeq=d=>!!d&&d.items.some(hasSeq);
 // first per-colorway day vs an older day without seq: compare by product+name+orig instead
 const legacyCmp=(D,P)=>dayHasSeq(D)&&!!P&&!dayHasSeq(P);
-const keyFor=legacy=>i=>legacy?i.id+'|'+i.name+'|'+i.orig:(hasSeq(i)?i.id+'|'+i.seq:(ABE()?i.id:i.id+'|'+i.name));
+const keyFor=(legacy,sid)=>i=>legacy?i.id+'|'+i.name+'|'+i.orig:(hasSeq(i)?i.id+'|'+i.seq:((sid||store)==='abercrombie'?i.id:i.id+'|'+i.name));
 const minBy=(d,k)=>{const m={};if(d)for(const i of d.items){const x=k(i);if(!m[x]||i.sale<m[x].sale)m[x]=i}return m};
 const imgUrl=c=>`https://img.abercrombie.com/is/image/anf/KIC_${c}_prod1?policy=product-medium&wid=350&hei=438`;
 // per-colorway items use their own photo only; photos.json (by product id) is for old no-seq days
@@ -46,22 +58,31 @@ const wmeta=w=>({id:w.id,seq:w.seq,name:w.name,color:w.color||'',photo:'',store:
 // a browser that has never saved favorites starts from the repo watch list
 try{if(localStorage.getItem(FKEY)===null&&watch.items.length){for(const w of watch.items)favs[wkey(w)]=wmeta(w);saveFavs()}}catch(e){}
 const TRK='<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>';
-const star=i=>{if(!TRACK())return '';const k=fk(i),on=!!favs[k];return `<span class="fav" role="button" tabindex="0" aria-label="Track price" title="Track price" aria-pressed="${on}" data-k="${esc(k)}">${TRK}</span>`};
+const star=i=>{if(!TRACK())return '';const k=fk(i),on=!!favs[k];return `<button type="button" class="fav" aria-pressed="${on}" aria-label="Track price: ${esc(i.name)}${i.color?' ('+esc(i.color)+')':''}" title="Track price" data-k="${esc(k)}">${TRK}</button>`};
 const isNew=i=>Y&&!ym[tk(i)];
-function card(i,tags='',extra=''){const p=photo(i)||i._p;
-return `<a class="card" href="${url(i)}" target="_blank" rel="noopener"><div class="ph">${p?`<img loading="lazy" src="${p}" alt="" onerror="this.remove()">`:'<span class="nop">No photo</span>'}${pct(i)==null?'':`<span class="tag">${pt(i)}</span>`}${tags}${star(i)}</div><div class="info"><div class="nm">${esc(i.name)}</div><div class="cl">${esc(i.color||'')}</div><div class="pr">${priceH(i)}</div>${extra}</div></a>`}
-let vcat='all',vsort='off';
-const SKEY='sale-tracker-sections'+NS;
+const NOPH='<span class="nop">No photo</span>';
+function card(i,tags='',extra=''){const p=photo(i)||i._p,sub=i.color||(i.ccode?i.id+' \u00b7 '+i.ccode:'');
+return `<article class="card"><div class="ph">${p?`<img loading="lazy" src="${p}" alt="" onerror="this.outerHTML=&quot;&lt;span class='nop'&gt;No photo&lt;/span&gt;&quot;">`:NOPH}${pct(i)==null?'':`<span class="tag">${pt(i)}</span>`}${tags}${star(i)}</div><div class="info"><a class="nm" href="${url(i)}" target="_blank" rel="noopener">${esc(i.name)}</a><div class="cl">${esc(sub)}</div><div class="pr">${priceH(i)}</div>${extra}</div></article>`}
+let vcats=new Set(),vsort='off',vq='',grids={},slots={},newCounts={},viewCount=0;
+const announce=t=>{const e=$('#status');if(e)e.textContent=t};
+const SKEY='sale-tracker-sections-v2'+NS;
 let secOpen={};try{Object.assign(secOpen,JSON.parse(localStorage.getItem(SKEY)||'{}'))}catch(e){}
-document.addEventListener('toggle',e=>{const d=e.target;if(d&&d.dataset&&d.dataset.s){secOpen[d.dataset.s]=d.open;try{localStorage.setItem(SKEY,JSON.stringify(secOpen))}catch(x){}}},true);
 const CATS_E=[['Swim',/swim|trunk/],['Outerwear',/jacket|coat|puffer|bomber|parka|vest|windbreaker|shacket|blazer|anorak/],['Sweaters',/sweater|cardigan|knit/],['Hoodies',/hoodie|afterhood|sweatshirt|fleece|zip/],['Underwear',/boxer|brief|underwear|socks?\b/],['Tees & tanks',/\btees?\b|t-shirt|tank|muscle|henley|jersey/],['Shirts & polos',/polo|shirt|flannel|oxford|button|popover/],['Bottoms',/\bpants?\b|\bshorts?\b(?![- ]sleeve)|jogger|jean|sweatpant|chino|trouser|cargo|denim|legging/]];
 const CATS_W=[['Swim',/bikini|swim|one-piece|one-p\b|bathing|\bbottoms? only/],['Shoes',/\bshoes?\b|\bheels?\b|\bboots?\b|booties|bootie|\bflats?\b|sandal|sneaker|loafer|\bmules?\b|\bpumps?\b|\bclogs?\b|wedge|slipper|\bslides?\b|mary jane|ballet|platform|espadrille|trainer/],['Dresses & skirts',/dress|skirt|jumpsuit|romper|gown|\bskort|\bmidi|\bmaxi|\bmini\b/],['Outerwear',/jacket|coat|puffer|parka|blazer|\bvest\b|trench|\bcape\b|anorak|poncho|shacket|bomber|blouson/],['Hoodies',/hoodie|sweatsh|fleece|half-zip|quarter-zip|full-zip|\bterry\b/],['Sweaters',/sweater|sweatr|cardigan|\bknit|pullover|jumper|rollneck|crewn|v-nec|cashmere|turtle|mockneck|boatneck/],['Tops',/\btops?\b|\btees?\b|t-sh|t-shirt|\btank|blouse|shirt|bodysuit|\bcami\b|\bpolo\b|henley|tunic|button-up|button-down|\bjersey\b|rugby|\bcrop|long-sleev|short-sleev|sleeveless|dolman|three-quar|\bpolo/],['Bottoms',/\bpants?\b|\bshorts?\b(?![- ]sleeve)|jean|legging|jogger|sweatpant|trouser|culotte|chino|denim|cargo|\bjort|wide-leg|slim-wide|straight-leg|slim-straight|\bankl|flare|pintuck|full-length|\bcapri/],['Accessories',/\bbags?\b|\bbelt|scarf|\bhats?\b|glove|\bsocks?\b|jewel|necklace|earring|bracelet|\btote\b|purse|wallet|beanie|sunglass|\bwatch\b|minaudi|\bbra\b|pajama/]];
 const CATS=SPACE==='eric'?CATS_E:CATS_W;
+document.addEventListener('click',e=>{const sm=e.target.closest&&e.target.closest('details.sec>summary');if(!sm)return;const d=sm.parentElement;
+ setTimeout(()=>{secOpen[d.dataset.s]=d.open;try{localStorage.setItem(SKEY,JSON.stringify(secOpen))}catch(x){}
+  const id=d.dataset.s,slot=d.querySelector('[data-slot]');if(d.open&&slot&&slots[id]){slot.outerHTML=slots[id]();delete slots[id]}},0)});
+const PAGE=48,moreBtn=(id,left)=>`<button type="button" class="morebtn" data-more="${id}">Show ${Math.min(PAGE,left)} more <i>(${left} left)</i></button>`;
+const gridHTML=(id,list,mk)=>{grids[id]={list,mk,n:Math.min(PAGE,list.length)};const left=list.length-grids[id].n;return `<div class="grid" data-g="${id}">${list.slice(0,grids[id].n).map(mk).join('')}</div>${left>0?moreBtn(id,left):''}`};
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-more]');if(!b)return;const g=grids[b.dataset.more],el=document.querySelector(`.grid[data-g="${b.dataset.more}"]`);if(!g||!el)return;
+ const next=g.list.slice(g.n,g.n+PAGE);el.insertAdjacentHTML('beforeend',next.map(g.mk).join(''));g.n+=next.length;const left=g.list.length-g.n;
+ if(left>0)b.innerHTML=`Show ${Math.min(PAGE,left)} more <i>(${left} left)</i>`;else b.remove()});
 const catOf=n=>{const t=String(n).toLowerCase();for(const [c,r] of CATS)if(r.test(t))return c;return 'Other'};
 // is there a sitewide sale? inferred from the store's promo banner text
 const saleState=t=>{if(!t)return{k:'unk',big:'Sitewide sale: unknown'};
  const x=t.toLowerCase();
- if(/\bno (site-?wide )?(sale|promo)/.test(x))return{k:'no',big:'No sitewide sale'};
+ if(/\bno (site-?wide |store-?wide )?(% off )?(sale|promo)|\bno (site-?wide|store-?wide)\b/.test(x))return{k:'no',big:'No sitewide sale'};
  const body=x.split(/[.|;]/).filter(p=>!/sign ?up|e-?mail|newsletter|\bapp\b|first order|subscribe|text /.test(p)).join(' ');
  if(/\d+\s?% off|site-?wide|extra \d+%|up to \d+%|\bbogo\b|buy \d+,? get/.test(body))return{k:'yes',big:'Sitewide sale'};
  return{k:'none',big:'No sitewide sale detected'}};
@@ -77,18 +98,19 @@ function view(D,P,which){
  const disc=ABE()?its.filter(i=>pct(i)>=40):its;
  const cn=c=>disc.filter(i=>catOf(i.name)===c).length;
  const cats=[...CATS.map(c=>c[0]),'Other'].filter(c=>cn(c)||newsAll.some(i=>catOf(i.name)===c));
- const vc=vcat==='all'||cats.includes(vcat)?vcat:'all',vs0=vsort==='drop'&&!P?'off':vsort,vs=FLAT()&&(vs0==='off'||vs0==='saved')?'price':vs0;
+ const act=[...vcats].filter(c=>cats.includes(c)),vs0=vsort==='drop'&&!P?'off':vsort,vs=FLAT()&&(vs0==='off'||vs0==='saved')?'price':vs0;
+ const fq=!!vq;
  const dropAmt=i=>dm[k(i)]?Math.max(0,dm[k(i)].sale-i.sale):0;
  const off=(a,b)=>pv(b)-pv(a)||a.sale-b.sale;
  const ord={off,price:(a,b)=>a.sale-b.sale||off(a,b),pricehi:(a,b)=>b.sale-a.sale||off(a,b),saved:(a,b)=>((b.orig||b.sale)-b.sale)-((a.orig||a.sale)-a.sale)||off(a,b),drop:(a,b)=>dropAmt(b)-dropAmt(a)||off(a,b)}[vs];
- const sel=a=>vc==='all'||catOf(a.name)===vc;
+ const sel=a=>(!act.length||act.includes(catOf(a.name)))&&(!vq||((a.name||'')+' '+(a.color||'')+' '+(a.ccode||'')+' '+a.id).toLowerCase().includes(vq));
  const news=newsAll.filter(sel).sort(ord);
  const bands=[['b60','60%+ off',i=>pct(i)>=60],['b50','50\u201360% off',i=>pct(i)>=50&&pct(i)<60],['b40','40\u201350% off',i=>pct(i)>=40&&pct(i)<50]].concat(ABE()?[]:[['lo','Under 40% off',i=>pct(i)!=null&&pct(i)<40],['na','Discount n/a (original price not shown)',i=>pct(i)==null]]).map(([id,t,f])=>{const all=its.filter(f);return{id,t,all,list:all.filter(sel).sort(ord)}});
  const tagsFor=i=>P&&!dm[k(i)]?'<span class="tag n">NEW</span>':(P&&dm[k(i)]&&i.sale<dm[k(i)].sale?'<span class="tag d">DROP</span>':'');
  const firstBand=(bands.find(b=>b.all.length)||bands[0]).id;
  const isOpen=id=>secOpen[id]!==undefined?secOpen[id]:(!/^(b60|b50|b40|lo|na)$/.test(id)||id===firstBand); // your own choice wins; otherwise the first non-empty discount band is open
- const sec=(id,title,ct,body)=>`<details class="sec" data-s="${id}"${isOpen(id)?' open':''}><summary><h2>${title} <span class="ct">${ct}</span></h2></summary>${body}</details>`;
- const of=(n,t)=>vc==='all'?n:n+' of '+t;
+ const sec=(id,title,ct,bodyFn)=>{const open=isOpen(id);if(!open)slots[id]=bodyFn;return `<details class="sec" data-s="${id}"${open?' open':''}><summary><h2>${title} <span class="ct">${ct}</span></h2></summary>${open?bodyFn():`<div data-slot="${id}"></div>`}</details>`};
+ const of=(n,t)=>(act.length||fq)?n+' of '+t:n;
  const drops=Object.values(cm).filter(i=>P&&dm[k(i)]&&i.sale<dm[k(i)].sale);
  const gone=P?Object.values(dm).filter(i=>!cm[k(i)]):[];
  const none=t=>`<div class="empty">${t}</div>`;
@@ -96,14 +118,16 @@ function view(D,P,which){
  const rows=(a,f)=>a.length?`<ul class="rows">${a.map(f).join('')}</ul>`:none('None.');
  const st=(n,l)=>`<div class="st"><b>${n}</b><span>${l}</span></div>`;
  const notes=[D.readable===false?'<b>Page could not be read fully.</b>':'',!P&&D===T&&!ABE()?'Comparison starts tomorrow.':'',legacy?'Colorway comparison starts next day; today is compared to yesterday by product, name and original price.':''].filter(Boolean).join(' ');
- topInfo={promo:D.promo,notes};railInfo={cats:cats.map(c=>[c,cn(c)]),all:disc.length,vc,vs,flat:FLAT(),hasP:!!P};
+ grids={};slots={};topInfo={promo:D.promo,notes};railInfo={cats:cats.map(c=>[c,cn(c)]),all:disc.length,act,vs,flat:FLAT(),hasP:!!P};
  let o=P?`<div class="newchip">${newsAll.length} new item${newsAll.length===1?'':'s'}</div>`:'';
- if(FLAT()){const fl=its.filter(sel).sort(ord);o+=fl.length?`<div class="grid">${fl.map(i=>card(i,tagsFor(i))).join('')}</div>`:none(its.length?'Nothing matches this filter.':'No items listed today.')}
- else for(const b of bands)o+=sec(b.id,b.t,of(b.list.length,b.all.length),b.list.length?`<div class="grid">${b.list.map(i=>card(i,tagsFor(i))).join('')}</div>`:none(vc==='all'?'Nothing in this range.':'Nothing matches this filter.'));
+ if(FLAT()){const fl=its.filter(sel).sort(ord);viewCount=fl.length;o+=fl.length?gridHTML('flat',fl,i=>card(i,tagsFor(i))):none(its.length?'Nothing matches this filter.':'No items listed today.')}
+ else{viewCount=0;let shown=0;for(const b of bands){if(!b.all.length)continue;shown++;viewCount+=b.list.length;
+  o+=sec(b.id,b.t,of(b.list.length,b.all.length),()=>b.list.length?gridHTML(b.id,b.list,i=>card(i,tagsFor(i))):none('Nothing matches this filter.'))}
+  if(!shown)o+=none('No items at 40% off or more.')}
  if(P){
- o+=sec('new','New',`${of(news.length,newsAll.length)} since ${esc(P.label||fmtD(P.date))}`,news.length?`<div class="grid">${news.map(i=>card(i)).join('')}</div>`:none('Nothing new.'));
- o+=sec('drops','Price drops',drops.length,rows(drops,i=>row(i,`<s>${$$(dm[k(i)].sale)}</s> \u2192 ${priceH({sale:i.sale,range:i.range})}${pct(i)==null?'':` <span class="sub">${pt(i)}</span>`}`)));
- o+=sec('gone','Gone',gone.length,rows(gone,i=>row(i,`was ${i.range?'from ':''}${$$(i.sale)}`)));}
+ o+=sec('new','New',`${of(news.length,newsAll.length)} since ${esc(P.label||fmtD(P.date))}`,()=>news.length?gridHTML('new',news,i=>card(i)):none('Nothing new.'));
+ o+=sec('drops','Price drops',drops.length,()=>rows(drops,i=>row(i,`<s>${$$(dm[k(i)].sale)}</s> \u2192 ${priceH({sale:i.sale,range:i.range})}${pct(i)==null?'':` <span class="sub">${pt(i)}</span>`}`)));
+ o+=sec('gone','Gone',gone.length,()=>rows(gone,i=>row(i,`was ${i.range?'from ':''}${$$(i.sale)}`)));}
  return o}
 const main=$('#view');let cur='t';
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -114,7 +138,7 @@ const matchDay=(f,D)=>{let m=null;for(const i of D.items){const ok=f.seq&&hasSeq
 const dayCache={};
 const COLS=['id','seq','name','color','sale','orig'];
 const unpack=a=>a.days.map(d=>({date:d.date,label:d.label,items:d.items.map(r=>{if(!Array.isArray(r))return r;const o={};COLS.forEach((c,n)=>{if(r[n]!==''&&r[n]!=null)o[c]=r[n]});return o})}));
-const fixColors=d=>{if(SPACE!=='eric')for(const i of d.items)if(/^[A-Z]{2}\d{4}$/.test(i.color||''))i.color='';return d};
+const fixColors=d=>{if(SPACE!=='eric')for(const i of d.items)if(/^[A-Z]{2}\d{4}$/.test(i.color||'')){i.ccode=i.color;i.color=''}return d};
 const loadAllFor=sid=>dayCache[sid]||(dayCache[sid]=(async()=>{
  const b=baseOf(sid),ix=(await get(b+'index.json').catch(()=>null))||{days:[]};
  const cur=(await Promise.all((ix.days||[]).filter(n=>!/baseline/.test(n)).map(n=>get(b+n+'.json').catch(()=>null)))).filter(d=>d&&d.items);
@@ -142,19 +166,26 @@ function favCount(){const b=document.querySelector('.tabs button[data-k="f"]');i
 function toggleFav(k){if(favs[k])delete favs[k];else{const i=byKey[k]||{};favs[k]={id:i.id,seq:i.seq,name:i.name,color:i.color||'',photo:photo(i)||'',store:sidOf(i)};if(!favs[k].id){const p=k.split('|');favs[k].id=p[0]}}
  saveFavs();document.querySelectorAll('.fav').forEach(e=>{if(e.dataset.k===k){const on=!!favs[k];e.setAttribute('aria-pressed',on)}});favCount();if(cur==='f')favView()}
 document.addEventListener('click',e=>{const f=e.target.closest&&e.target.closest('.fav');if(!f)return;e.preventDefault();e.stopPropagation();toggleFav(f.dataset.k)});
-document.addEventListener('change',e=>{const t=e.target;if(t.id==='vs'){vsort=t.value;render();const n=$('#vs');if(n)n.focus()}});
-document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('[data-c]');if(c){vcat=c.dataset.c;render();const n=document.querySelector('.cat[aria-pressed="true"]');if(n)n.focus()}});
-document.addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const f=e.target.closest&&e.target.closest('.fav');if(!f)return;e.preventDefault();toggleFav(f.dataset.k)});
+document.addEventListener('change',e=>{const t=e.target;if(t.id==='vs'){vsort=t.value;render();const n=$('#vs');if(n)n.focus()}
+ else if(t.dataset&&t.dataset.c!==undefined&&t.type==='checkbox'){const c=t.dataset.c;if(c==='all')vcats.clear();else if(t.checked)vcats.add(c);else vcats.delete(c);render();const n=document.querySelector(`.cat input[data-c="${CSS.escape(c)}"]`);if(n)n.focus()}});
+{let tm=0;const vsq=$('#vsearch');if(vsq)vsq.oninput=()=>{clearTimeout(tm);tm=setTimeout(()=>{vq=vsq.value.trim().toLowerCase();render()},160)}}
+{const ft=$('#ftoggle'),rl=$('#rail');if(ft)ft.onclick=()=>{const o=rl.classList.toggle('open');ft.setAttribute('aria-expanded',o)}}
 function renderTop(){const el=$('#sale');if(el)el.innerHTML=(cur==='f'||!topInfo)?'':saleBox(topInfo.promo,topInfo.notes);
  const h=$('#sname');if(h)h.textContent=cur==='f'?'Tracking':storeName(store)}
 function renderRail(){
- const sw=$('#stores');if(sw)sw.innerHTML=STORES.map(x=>`<button class="srow" data-st="${x[0]}" aria-pressed="${x[0]===store}"><span class="sin">${esc(x[1][0])}</span>${esc(x[1])}</button>`).join('');
+ const sw=$('#stores');if(sw)sw.innerHTML=STORES.map(x=>{const n=newCounts[x[0]];return `<button class="srow" data-st="${x[0]}" aria-pressed="${x[0]===store}"><span class="sin" aria-hidden="true">${esc(x[1][0])}</span>${esc(x[1])}${n>0?`<span class="nb" aria-label="${n} new item${n===1?'':'s'}">${n}</span>`:''}</button>`}).join('');
  const sb=$('#sortbox'),cb=$('#catbox'),r=railInfo;
  const opts=r?(r.flat?[['price','Lowest price'],['pricehi','Highest price']]:[['off','Biggest discount %'],['saved','Biggest $ saved'],['price','Lowest price']]).concat(r.hasP?[['drop','Biggest drop since yesterday']]:[]).map(([v,t])=>`<option value="${v}"${v===r.vs?' selected':''}>${t}</option>`).join(''):'';
- if(sb)sb.innerHTML=r?`<h3>Sort</h3><select id="vs" aria-label="Sort">${opts}</select>`:'';
- if(cb)cb.innerHTML=r?`<h3>Category</h3><div class="cats" role="group" aria-label="Category"><button class="cat" data-c="all" aria-pressed="${r.vc==='all'}"><span>All</span><i>${r.all}</i></button>${r.cats.map(([c,n])=>`<button class="cat" data-c="${esc(c)}" aria-pressed="${c===r.vc}"><span>${esc(c)}</span><i>${n}</i></button>`).join('')}</div>`:''}
+ if(sb)sb.innerHTML=r?`<label class="rh" for="vs">Sort</label><select id="vs">${opts}</select>`:'';
+ const chk=(c,t,n,on)=>`<label class="cat"><input type="checkbox" data-c="${esc(c)}"${on?' checked':''}><span class="box" aria-hidden="true"></span><span class="cn">${esc(t)}</span><i>${n}</i></label>`;
+ if(cb)cb.innerHTML=r?`<p class="rh" id="rh-cat">Category</p><div class="cats" role="group" aria-labelledby="rh-cat">${chk('all','All',r.all,!r.act.length)}${r.cats.map(([c,n])=>chk(c,c,n,r.act.includes(c))).join('')}</div>`:'';
+ const fc=$('#fcount');if(fc){const n=(r?r.act.length:0)+(vq?1:0);fc.textContent=n?n:'';fc.hidden=!n}}
+const newCountFor=async sid=>{const b=baseOf(sid),ix=await get(b+'index.json').catch(()=>null),ds=((ix&&ix.days)||[]).slice(-2);if(ds.length<2)return null;
+ const [P,D]=await Promise.all(ds.map(n=>get(b+n+'.json').catch(()=>null)));if(!P||!D||!P.items||!D.items)return null;
+ const k=keyFor(legacyCmp(D,P),sid),pm=minBy(P,k),cm=minBy(D,k);return Object.values(cm).filter(i=>!pm[k(i)]).length};
+async function loadNewCounts(){await Promise.all(STORES.map(async x=>{try{newCounts[x[0]]=await newCountFor(x[0])}catch(e){}}));renderRail()}
 function render(){document.body.classList.toggle('trk',cur==='f'&&TRACK());
- if(cur==='f'&&TRACK())favView();else if(!T){$('#view').innerHTML='<div class="empty big"><b>No data yet</b></div>';topInfo=null;railInfo=null}else $('#view').innerHTML=view(T,Y);renderTop();renderRail();favCount();
+ if(cur==='f'&&TRACK())favView();else if(!T){$('#view').innerHTML='<div class="empty big"><b>No data yet</b></div>';topInfo=null;railInfo=null}else $('#view').innerHTML=view(T,Y);renderTop();renderRail();favCount();announce(cur==='f'?'Tracking':`${storeName(store)}: ${viewCount} item${viewCount===1?'':'s'} shown`);
  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===cur))}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{cur=b.dataset.k;render()});
 
@@ -173,7 +204,7 @@ function tbl(){if(!T){$('#tb').innerHTML='';$('#cnt').textContent='0 rows';retur
  if(q)r=r.filter(i=>(i.name+' '+(i.color||'')+' '+i.id).toLowerCase().includes(q));
  if(flt==='60')r=r.filter(i=>i.pct>=60);if(flt==='new')r=r.filter(isNew);
  r.sort((a,b)=>{const x=a[sortK],y=b[sortK];return(x>y?1:x<y?-1:0)*(asc?1:-1)});
- $('#tb').innerHTML=r.map(i=>`<tr><td>${star(i)} <a href="${url(i)}" target="_blank">${esc(i.name)}</a></td><td>${esc(i.color||'')}</td><td>${$$(i.sale)}</td><td>${i.orig?$$(i.orig):'n/a'}</td><td>${i.pct<0?'n/a':i.pct+'%'}</td></tr>`).join('');$('#cnt').textContent=r.length+' rows'}
+ $('#tb').innerHTML=r.map(i=>`<tr><td>${star(i)} <a href="${url(i)}" target="_blank">${esc(i.name)}</a></td><td>${esc(i.color||'')}</td><td>${$$(i.sale)}</td><td>${i.orig?$$(i.orig):'n/a'}</td><td>${i.pct<0?'n/a':i.pct+'%'}</td></tr>`).join('');$('#cnt').textContent=r.length+' rows';document.querySelectorAll('th[data-k]').forEach(th=>th.setAttribute('aria-sort',th.dataset.k===sortK?(asc?'ascending':'descending'):'none'))}
 $('#q').oninput=e=>{q=e.target.value.toLowerCase();tbl()};$('#f').onchange=e=>{flt=e.target.value;tbl()};
 document.querySelectorAll('th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;asc=sortK===k?!asc:false;sortK=k;tbl()});
 function older(){$('#older').innerHTML=idx.days.slice(0,-2).reverse().map(d=>`<li>${esc(d)}</li>`).concat((idx.archive||[]).slice().reverse().map(a=>`<li>${esc(a.replace(/^archive\//,'').replace(/\.json$/,''))} (archived)</li>`)).join('')||'<li class="empty">No older days yet.</li>';}
@@ -181,24 +212,18 @@ function older(){$('#older').innerHTML=idx.days.slice(0,-2).reverse().map(d=>`<l
 async function setStore(n){store=n;try{localStorage.setItem(STKEY,n)}catch(e){}
  idx=(await get(base()+'index.json').catch(()=>null))||{days:[]};if(!idx.days)idx.days=[];
  const ds=[];for(const x of idx.days.slice(-2)){const d=await get(base()+x+'.json').catch(()=>null);if(d&&d.items)ds.push(d)}
- if(SPACE!=='eric')for(const d of ds)for(const i of d.items)if(/^[A-Z]{2}\d{4}$/.test(i.color||''))i.color=''; // J.Crew feed gives a color code, not a name
+ if(SPACE!=='eric')for(const d of ds)fixColors(d); // J.Crew feed gives a color code, not a name: keep it to tell look-alike boxes apart
  [Y,T]=ds.length==2?ds:[null,ds[0]||null];
  tk=keyFor(legacyCmp(T,Y));ym=minBy(Y,tk);
  byKey={};for(const d of [Y,T])if(d)for(const i of d.items)byKey[fk(i)]=i;
- vcat='all';vsort='off';q='';flt='all';
+ vcats.clear();vsort='off';vq='';q='';flt='all';
+ const vs_=$('#vsearch');if(vs_)vs_.value='';
  const sq=$('#q');if(sq)sq.value='';const sf=$('#f');if(sf)sf.value='all';
  if(!TRACK()&&cur==='f')cur='t';
  const fb=document.querySelector('.tabs button[data-k="f"]');if(fb)fb.style.display=TRACK()?'':'none';
  const it=STORES.find(x=>x[0]===store);const ti=$('.intro');if(ti)ti.firstChild.textContent=it[1]+' '+it[2];
  upd();render();tbl();older()}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-st]');if(b&&b.dataset.st!==store)setStore(b.dataset.st)});
-// boxes per row: a slider in the left column (saved in this browser; the phone and the computer keep their own value)
-{const mq=window.matchMedia?matchMedia('(max-width:900px)'):{matches:false},KEY='sale-tracker-cols'+NS,sl=$('#cols'),lab=$('#colsv');
- let saved={};try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){}
- const apply=()=>{const m=mq.matches,min=m?1:2,max=m?4:8,v=Math.max(min,Math.min(max,+saved[m?'m':'d']||(m?2:4)));
-  if(sl){sl.min=min;sl.max=max;sl.value=v}if(lab)lab.textContent=v;
-  document.documentElement.style.setProperty('--cols',v);document.body.classList.toggle('dense',v>=(m?3:6))};
- if(sl)sl.oninput=()=>{saved[mq.matches?'m':'d']=+sl.value;try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(e){}apply()};
- if(mq.addEventListener)mq.addEventListener('change',apply);apply()}
 await setStore(store);
+loadNewCounts();
 })();
